@@ -6,6 +6,26 @@
 //#include <QColor>
 #include <QMap>
 
+// Абстрактный базовый класс для того чтобы его ребёнок мог стать шаблоном.
+// Данный метод имеет большое ограничение - он не позволяет шаблонам детей
+// этого класса иметь сигналы и слоты.
+class CGradientMapBase: public QWidget
+{
+    Q_OBJECT
+
+public:
+    CGradientMapBase(QWidget* parent = nullptr): QWidget(parent)
+    {
+
+    }
+
+protected:
+    virtual ~CGradientMapBase()
+    {
+
+    }
+};
+
 // CGradientMap должен был стать шаблоном, однако Qt не поддерживает шаблонные классы,
 // неследованные от QWidget. Это связано с определёнными ограничениями препроцессора moc.
 // Какая жалость!
@@ -29,8 +49,8 @@ public:
 
     // adjustContent вписывает лишь общую часть целого рисунка. adjustAllContent вписывает
     // рисунок полностью. Может привести к выпаданию данных в некоторых скан-линиях.
-    void adjustContent();
-    void adjustAllContent();
+//    void adjustContent();
+//    void adjustAllContent();
 
     // Метод add добавляет вектор данных в вкарту. Каждый вектор характеризуется своим
     // дескриптором. Метод add замещает ранее существующий id.
@@ -57,8 +77,8 @@ public:
     void setMin(double min);
     void setMax(double max);
 
-    double localMin()const;
-    double localMax()const;
+//    double localMin()const;
+//    double localMax()const;
 
     double globalMin()const;
     double globalMax()const;

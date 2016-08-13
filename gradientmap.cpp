@@ -69,10 +69,10 @@ void CGradientMap::clear()
     map.clear();
 }
 
-void CGradientMap::adjustAllContent()
-{
+//void CGradientMap::adjustAllContent()
+//{
 
-}
+//}
 
 void CGradientMap::setXPosition(float x)
 {
@@ -157,13 +157,13 @@ void CGradientMap::rebaseColor()
     blueBase = blueWarm - blueCool;
 }
 
-double CGradientMap::localMin()const
-{
+//double CGradientMap::localMin()const
+//{
 //    float const xFactor = width / xResolution,
 //            yFactor = height / yResolution;
 
 //    float const iy = (j - y) / yFactor;
-}
+//}
 
 double CGradientMap::globalMin()const
 {

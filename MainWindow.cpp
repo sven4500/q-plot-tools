@@ -2,6 +2,7 @@
 #include <QTimer>
 #include <QKeyEvent>
 #include "MainWindow.h"
+//#include "MyClass.h"
 //#include "gradientmap.h"
 
 MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
@@ -34,8 +35,8 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
     gmap->updateGradientImage();
     gmap->update();
 
-    double min = gmap->globalMin(),
-            max = gmap->globalMax();
+//    double min = gmap->globalMin(),
+//            max = gmap->globalMax();
 
     label = new QLabel(this);
 
