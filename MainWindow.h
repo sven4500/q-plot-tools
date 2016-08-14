@@ -1,26 +1,17 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef __MAINWINDOW_H
+#define __MAINWINDOW_H
 
 #include <QMainWindow>
-#include <vector>
 #include <QLabel>
-#include <stdlib.h>
+#include <vector>
 #include "gradientmap.h"
 
-//class CCustomThread: public QThread
-//{
-//    Q_OBJECT
-
-//public:
-//    virtual void run();
-//};
-
-class MainWindow : public QMainWindow
+class MainWindow: public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = 0);
+    MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -29,12 +20,13 @@ private slots:
 private:
     virtual void keyPressEvent(QKeyEvent* event);
 
-    std::vector<double*> vect;
-    CGradientMap* gmap;
+    std::vector<float*> fvect;
+    std::vector<int*> ivect;
+
+    CGradientMap<int>* gmap;
     QLabel* label;
 
-//    int seconds;
     int frames;
 };
 
-#endif // MAINWINDOW_H
+#endif
