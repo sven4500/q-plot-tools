@@ -2,8 +2,7 @@
 #include <QTimer>
 #include <QKeyEvent>
 #include "MainWindow.h"
-//#include "MyClass.h"
-//#include "gradientmap.h"
+#include <stdlib.h>
 
 MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 {
@@ -13,7 +12,9 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 //    addr[2] = 0.50;
 //    addr[3] = 1.0;
 
-    gmap = new CGradientMap();
+    gmap = new CGradientMap<float>();
+    gmap->setMin(0.0f);
+    gmap->setMax(1.0f);
     gmap->setResolution(1000.0, 1000.0);
 //    gmap->add(0, addr, 2);
 //    gmap->add(1, addr + 2, 2);
@@ -26,7 +27,7 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
     vect.resize(1000, nullptr);
     for(int j = 0; j < 1000; ++j)
     {
-        vect[j] = new double[1000];
+        vect[j] = new float[1000];
         for(int i = 0; i < 1000; ++i)
             vect[j][i] = float(rand()) / float(RAND_MAX);
         gmap->add(j, vect[j], 1000);

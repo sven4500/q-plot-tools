@@ -11,10 +11,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = gradientmap
 TEMPLATE = app
 
-
 SOURCES += main.cpp\
-        MainWindow.cpp \
-    gradientmap.cpp
+    MainWindow.cpp
 
-HEADERS  += MainWindow.h \
+HEADERS += MainWindow.h\
     gradientmap.h
