@@ -136,9 +136,9 @@ private:
     Color warmColor;
     Color differenceColor;
 
-    ty min;
-    ty max;
-    ty peakToPeak;
+    float min;
+    float max;
+    float peakToPeak;
 
     // x и y обозначают пиксель верхнего левого угла картинки. Возникает ошибка округления
     // при изменении размера рабочей области окна, когда x и y имеют тип int.
@@ -195,7 +195,7 @@ void CGradientMap<ty>::clear()
 }
 
 template<typename ty>
-void CGradientMap<ty>::add(int const id, ty const* const addr, int const size, int const bias)
+void CGradientMap<ty>::add(int id, ty const* addr, int size, int bias)
 {
     if(addr != nullptr && size > 0)
     {
@@ -213,45 +213,45 @@ void CGradientMap<ty>::remove(int id)
 }
 
 template<typename ty>
-void CGradientMap<ty>::swap(int const id1, int const id2)
+void CGradientMap<ty>::swap(int id1, int id2)
 {
     if(map.contains(id1) && map.contains(id2))
         std::swap(map[id1], map[id2]);
 }
 
 template<typename ty>
-void CGradientMap<ty>::setXPosition(int const x)
+void CGradientMap<ty>::setXPosition(int x)
 {
     CGradientMap::x = x;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setYPosition(int const y)
+void CGradientMap<ty>::setYPosition(int y)
 {
     CGradientMap::y = y;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setPosition(int const x, int const y)
+void CGradientMap<ty>::setPosition(int x, int y)
 {
     CGradientMap::x = x;
     CGradientMap::y = y;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setXResolution(float const resolution)
+void CGradientMap<ty>::setXResolution(float resolution)
 {
     CGradientMap::xResolution = resolution;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setYResolution(float const resolution)
+void CGradientMap<ty>::setYResolution(float resolution)
 {
     CGradientMap::yResolution = resolution;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setResolution(float const xResolution, float const yResolution)
+void CGradientMap<ty>::setResolution(float xResolution, float yResolution)
 {
     CGradientMap::xResolution = xResolution;
     CGradientMap::yResolution = yResolution;
@@ -260,15 +260,15 @@ void CGradientMap<ty>::setResolution(float const xResolution, float const yResol
 template<typename ty>
 void CGradientMap<ty>::setMin(ty const& min)
 {
-    CGradientMap::min = min;
-    CGradientMap::peakToPeak = max - min;
+    CGradientMap::min = static_cast<float>(min);
+    CGradientMap::peakToPeak = max - CGradientMap::min;
 }
 
 template<typename ty>
 void CGradientMap<ty>::setMax(ty const& max)
 {
-    CGradientMap::max = max;
-    CGradientMap::peakToPeak = max - min;
+    CGradientMap::max = static_cast<float>(max);
+    CGradientMap::peakToPeak = CGradientMap::max - min;
 }
 
 template<typename ty>
@@ -401,7 +401,7 @@ void CGradientMap<ty>::updateGradientImage()
 
             if(memDesc != nullptr && ix >= 0.0 && ix < memDesc->size)
             {
-                ty const& value = memDesc->addr[int(ix)];
+                float const value = static_cast<float>(memDesc->addr[static_cast<int>(ix)]);
 
                 // Войти в режим назыщения если текущее значение лежит вне диапазона.
                 if(value < min)
@@ -418,7 +418,7 @@ void CGradientMap<ty>::updateGradientImage()
                 }
                 else
                 {
-                    float const factor = (value - min) / peakToPeak; // <= здесь кроется подводный камень если int (результат всегда ноль)
+                    float const factor = (value - min) / peakToPeak;
                     *pixel++ = coolColor.blue + differenceColor.blue * factor;
                     *pixel++ = coolColor.green + differenceColor.green * factor;
                     *pixel++ = coolColor.red + differenceColor.red * factor;

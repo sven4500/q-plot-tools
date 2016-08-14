@@ -20,9 +20,10 @@ private slots:
 private:
     virtual void keyPressEvent(QKeyEvent* event);
 
-    std::vector<float*> vect;
+    std::vector<float*> fvect;
+    std::vector<int*> ivect;
 
-    CGradientMap<float>* gmap;
+    CGradientMap<int>* gmap;
     QLabel* label;
 
     int frames;
