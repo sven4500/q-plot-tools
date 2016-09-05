@@ -16,6 +16,7 @@ public:
 
 private slots:
     void updateFps();
+    void catchPoint(int x, int y);
 
 private:
     virtual void keyPressEvent(QKeyEvent* event);

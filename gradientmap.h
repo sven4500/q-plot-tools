@@ -1,6 +1,7 @@
 #ifndef __GRADIENTMAP_H
 #define __GRADIENTMAP_H
 
+//#include <QMarginsF>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QWidget>
@@ -16,6 +17,12 @@ class CGradientMapBase: public QWidget
 {
     Q_OBJECT
 
+signals:
+    // Выпадает когда пользователь щёлкает мышью по рабочей области окна.
+    // Возвращает индекс элемента карты. Возвращает указатель на элемент
+    // данных, который можно привести к исходному типу внутри слота.
+    void pointSelected(int ix, int iy/*, void* data*/);
+
 public:
     CGradientMapBase(QWidget* parent = nullptr): QWidget(parent)
     {
@@ -27,17 +34,29 @@ protected:
     {
 
     }
+
+    void pointSelectedProxy(int ix, int iy/*, void* data*/)
+    {
+        emit pointSelected(ix, iy);
+    }
+
 };
 
 // CGradientMap должен был стать шаблоном, однако Qt не поддерживает шаблонные классы,
 // неследованные от QWidget. Это связано с определёнными ограничениями препроцессора moc.
 // Какая жалость!
-// todo: сигнализировать если выбран узел. Возвращать его координаты и значение.
-// void itemSelected(double value, int ix = 0, int iy = 0);
 template<typename ty>
 class CGradientMap: public CGradientMapBase
 {
 public:
+//    struct PlotSetting
+//    {
+//        float horizontalMin;
+//        float horizontalMax;
+//        float verticalMin;
+//        float verticalMax;
+//    };
+
     CGradientMap(QWidget* parent = nullptr);
     virtual ~CGradientMap();
 
@@ -51,11 +70,11 @@ public:
 
     // adjustContent вписывает лишь общую часть целого рисунка. adjustAllContent вписывает
     // рисунок полностью. Может привести к выпаданию данных в некоторых скан-линиях.
-//    void adjustContent();
-//    void adjustAllContent();
+    void fitContent();
+//    void fitContentMin();
 
-    // Метод add добавляет вектор данных в вкарту. Каждый вектор характеризуется своим
-    // дескриптором id. Метод add замещает существующий дескриптор.
+    // Добавляет в карту очередной вектор данных, который характеризуется своим
+    // дескриптором id. Замещает существующий дескриптор.
     void add(int id, ty const* addr, int size, int bias = 0);
     void remove(int id);
 
@@ -66,10 +85,14 @@ public:
 
     void setPosition(int x, int y);
 
-    void setXResolution(float resolution);
-    void setYResolution(float resolution);
+    // Задаёт количество узлов карты помещающихся в рабочую область окна.
+    void setHorizontalResolution(float x);
+    void setVerticalResolution(float y);
 
-    void setResolution(float xResolution, float yResolution);
+    void setResolution(float x, float y);
+
+    void setHorizontalRange(float min, float max);
+    void setVerticalRange(float min, float max);
 
     void setCoolColor(int red, int green ,int blue);
     void setCoolColor(QColor const& color);
@@ -77,14 +100,17 @@ public:
     void setWarmColor(int red, int green ,int blue);
     void setWarmColor(QColor const& color);
 
-    void setMin(ty const& min);
-    void setMax(ty const& max);
+    void setMin(ty const& m_min);
+    void setMax(ty const& m_max);
 
 //    double localMin()const;
 //    double localMax()const;
 
     ty globalMin()const;
     ty globalMax()const;
+
+    void setMargins(int left, int top, int right, int bottom);
+    void setMargins(QMargins const& margins);
 
     // Данные добавляются в карту по-строчно. Чтобы избежать ненужной перерисовки
     // каждый раз когда добваляется очередной вектор
@@ -96,7 +122,9 @@ public:
 //    inline bool value(int x, int y, double* value)const;
 
 private:
-    struct MemDescConst
+    // Описывает характеристику буфера строки: адрес буфера и его размер. Смещение
+    // характеризует исключительно способ отрисовки строки.
+    struct MemDesc
     {
         ty const* addr;
         int size;
@@ -104,6 +132,8 @@ private:
 //        int id;
     };
 
+    // Примитивная структура для описания цвета. Использовать QColor не самое лучшее решение
+    // из-за инкапсуляции его данных.
     struct Color
     {
         int red;
@@ -126,50 +156,53 @@ private:
     // Думаю здесь использовать QMap более уместно вместо QVector. QVector приводит к фрагментации
     // памяти при каждом добавлении очередного вектора данных. QMap в свою очередь хранит данные
     // в разных областях памяти. Добавление и удаление здесь быстрее.
-    QMap<int, MemDescConst> map;
-    QImage image;
+    QMap<int, MemDesc> m_map;
+    QImage m_image;
 
-    QRect rubberband;
+    QMargins m_margins;
+
+    QRect m_rubberband;
 //    QString hint;
 
-    Color coolColor;
-    Color warmColor;
-    Color differenceColor;
+    Color m_coolColor;
+    Color m_warmColor;
 
-    float min;
-    float max;
-    float peakToPeak;
+    Color m_colorDifference;
+
+    float m_min;
+    float m_max;
+    float m_peakToPeak;
 
     // x и y обозначают пиксель верхнего левого угла картинки. Возникает ошибка округления
-    // при изменении размера рабочей области окна, когда x и y имеют тип int.
-    float x;
-    float y;
+    // при изменении размера рабочей области окна, когда x и y имеют тип int?
+    float m_x;
+    float m_y;
 
     // Точка на которую указывал указатель мыши перед нажатием кнопки мыши.
     // Используются только методами обработки событий мыши.
-    float xLastPosition;
-    float yLastPosition;
+//    float m_xLast;
+//    float m_yLast;
 
-    // Разрешение задаёт количество узлов помещающехся в рабочую область окна.
-    float xResolution;
-    float yResolution;
+    QPoint m_lastPos;
 
-    bool isRubberbandShown;
-//    bool isHintShown;
-//    bool isDynamicRangeShown;
+    // Задаёт количество узлов приходящихся на полную рабочую область окна.
+    float m_horizontalResolution;
+    float m_verticalResolution;
 
-//    bool hasDynamicRange;
-//    bool showHint;
+    bool m_showRubberband;
+    bool m_showHint;
+    bool m_showDynamicRange;
+
 };
 
 template<typename ty>
 CGradientMap<ty>::CGradientMap(QWidget* parent): CGradientMapBase(parent)
 {
-    x = 0.0;
-    y = 0.0;
+    m_x = 0.0;
+    m_y = 0.0;
 
-    xResolution = 1.0;
-    yResolution = 1.0;
+    m_horizontalResolution = 1.0;
+    m_verticalResolution = 1.0;
 
 //    min = 0.0;
 //    max = 1.0;
@@ -178,7 +211,7 @@ CGradientMap<ty>::CGradientMap(QWidget* parent): CGradientMapBase(parent)
     setCoolColor(0, 0, 0);
     setWarmColor(255, 255, 255);
 
-    isRubberbandShown = false;
+    m_showRubberband = false;
 //    isHintShown = false;
 }
 
@@ -191,7 +224,7 @@ CGradientMap<ty>::~CGradientMap()
 template<typename ty>
 void CGradientMap<ty>::clear()
 {
-    map.clear();
+    m_map.clear();
 }
 
 template<typename ty>
@@ -199,7 +232,7 @@ void CGradientMap<ty>::add(int id, ty const* addr, int size, int bias)
 {
     if(addr != nullptr && size > 0)
     {
-        MemDescConst& memDesc = map[id];
+        MemDesc& memDesc = m_map[id];
         memDesc.addr = addr;
         memDesc.size = size;
         memDesc.bias = bias;
@@ -209,110 +242,152 @@ void CGradientMap<ty>::add(int id, ty const* addr, int size, int bias)
 template<typename ty>
 void CGradientMap<ty>::remove(int id)
 {
-    map.remove(id);
+    m_map.remove(id);
 }
 
 template<typename ty>
 void CGradientMap<ty>::swap(int id1, int id2)
 {
-    if(map.contains(id1) && map.contains(id2))
-        std::swap(map[id1], map[id2]);
+    if(m_map.contains(id1) && m_map.contains(id2))
+        std::swap(m_map[id1], m_map[id2]);
 }
 
 template<typename ty>
 void CGradientMap<ty>::setXPosition(int x)
 {
-    CGradientMap::x = x;
+    m_x = x;
 }
 
 template<typename ty>
 void CGradientMap<ty>::setYPosition(int y)
 {
-    CGradientMap::y = y;
+    m_y = y;
 }
 
 template<typename ty>
 void CGradientMap<ty>::setPosition(int x, int y)
 {
-    CGradientMap::x = x;
-    CGradientMap::y = y;
+    m_x = x;
+    m_y = y;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setXResolution(float resolution)
+void CGradientMap<ty>::setHorizontalResolution(float resolutionX)
 {
-    CGradientMap::xResolution = resolution;
+    m_horizontalResolution = resolutionX;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setYResolution(float resolution)
+void CGradientMap<ty>::setVerticalResolution(float resolutionY)
 {
-    CGradientMap::yResolution = resolution;
+    m_verticalResolution = resolutionY;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setResolution(float xResolution, float yResolution)
+void CGradientMap<ty>::setResolution(float horizontalResolution, float verticalResolution)
 {
-    CGradientMap::xResolution = xResolution;
-    CGradientMap::yResolution = yResolution;
+    m_horizontalResolution = horizontalResolution;
+    m_verticalResolution = verticalResolution;
+}
+
+template<typename ty>
+void CGradientMap<ty>::setMargins(int left, int top, int right, int bottom)
+{
+    m_margins = QMargins(left, top, right, bottom);
+}
+
+template<typename ty>
+void CGradientMap<ty>::setMargins(QMargins const& margins)
+{
+    m_margins = margins;
 }
 
 template<typename ty>
 void CGradientMap<ty>::setMin(ty const& min)
 {
-    CGradientMap::min = static_cast<float>(min);
-    CGradientMap::peakToPeak = max - CGradientMap::min;
+    CGradientMap::m_min = static_cast<float>(min);
+    CGradientMap::m_peakToPeak = m_max - CGradientMap::m_min;
 }
 
 template<typename ty>
 void CGradientMap<ty>::setMax(ty const& max)
 {
-    CGradientMap::max = static_cast<float>(max);
-    CGradientMap::peakToPeak = CGradientMap::max - min;
+    CGradientMap::m_max = static_cast<float>(max);
+    CGradientMap::m_peakToPeak = CGradientMap::m_max - m_min;
+}
+
+// Вписывает карту целиком в рабочую область окна.
+template<typename ty>
+void CGradientMap<ty>::fitContent()
+{
+    if(m_map.empty())
+        return;
+
+    typename QMap<int, MemDesc>::const_iterator const end = m_map.cend();
+    typename QMap<int, MemDesc>::const_iterator iter = m_map.begin();
+
+    int minX = iter->bias,
+            maxX = iter->size + iter->bias;
+
+    while(iter != end)
+    {
+        minX = std::min(iter->bias, minX);
+        maxX = std::max(iter->size + iter->bias, maxX);
+        ++iter;
+    }
+
+    m_horizontalResolution = maxX - minX;
+    m_verticalResolution = m_map.size();
+
+    m_x = 0.0/*static_cast<float>(m_image.width()) * static_cast<float>(minX) / static_cast<float>(maxX - minX)*/;
+    m_y = 0.0;
+
+    updateGradientImage();
+    update();
 }
 
 template<typename ty>
 void CGradientMap<ty>::setCoolColor(int const red, int const green, int const blue)
 {
-    coolColor.red = red;
-    coolColor.green = green;
-    coolColor.blue = blue;
+    m_coolColor.red = red;
+    m_coolColor.green = green;
+    m_coolColor.blue = blue;
     updateDifferenceColor();
 }
 
 template<typename ty>
 void CGradientMap<ty>::setCoolColor(QColor const& color)
 {
-    coolColor.red = color.red();
-    coolColor.green = color.green();
-    coolColor.blue = color.blue();
+    m_coolColor.red = color.red();
+    m_coolColor.green = color.green();
+    m_coolColor.blue = color.blue();
     updateDifferenceColor();
 }
 
 template<typename ty>
 void CGradientMap<ty>::setWarmColor(int const red, int const green, int const blue)
 {
-    warmColor.red = red;
-    warmColor.green = green;
-    warmColor.blue = blue;
+    m_warmColor.red = red;
+    m_warmColor.green = green;
+    m_warmColor.blue = blue;
     updateDifferenceColor();
 }
 
 template<typename ty>
 void CGradientMap<ty>::setWarmColor(QColor const& color)
 {
-    warmColor.red = color.red();
-    warmColor.green = color.green();
-    warmColor.blue = color.blue();
+    m_warmColor.red = color.red();
+    m_warmColor.green = color.green();
+    m_warmColor.blue = color.blue();
     updateDifferenceColor();
 }
 
 template<typename ty>
 void CGradientMap<ty>::updateDifferenceColor()
 {
-    differenceColor.red = warmColor.red - coolColor.red;
-    differenceColor.green = warmColor.green - coolColor.green;
-    differenceColor.blue = warmColor.blue - coolColor.blue;
+    m_colorDifference.red = m_warmColor.red - m_coolColor.red;
+    m_colorDifference.green = m_warmColor.green - m_coolColor.green;
+    m_colorDifference.blue = m_warmColor.blue - m_coolColor.blue;
 }
 
 template<typename ty>
@@ -320,18 +395,18 @@ ty CGradientMap<ty>::globalMin()const
 {
     ty min;
 
-    if(map.empty())
+    if(m_map.empty())
         return min;
 
-    typename QMap<int, MemDescConst>::const_iterator const end = map.cend();
-    typename QMap<int, MemDescConst>::const_iterator iter = map.begin();
+    typename QMap<int, MemDesc>::const_iterator const end = m_map.cend();
+    typename QMap<int, MemDesc>::const_iterator iter = m_map.begin();
 
-    // В карте нет пустых векторов, поэтому addr[0] возможно.
+    // В карте нет пустых векторов, поэтому addr[0] возможно всегда.
     min = iter->addr[0];
 
     while(iter != end)
     {
-        MemDescConst const& memDesc = *iter;
+        MemDesc const& memDesc = *iter;
         for(int i = 0; i < memDesc.size; ++i)
             if(memDesc.addr[i] < min)
                 min = memDesc.addr[i];
@@ -346,17 +421,17 @@ ty CGradientMap<ty>::globalMax()const
 {
     ty max;
 
-    if(map.empty())
+    if(m_map.empty())
         return max;
 
-    typename QMap<int, MemDescConst>::const_iterator const end = map.cend();
-    typename QMap<int, MemDescConst>::const_iterator iter = map.begin();
+    typename QMap<int, MemDesc>::const_iterator const end = m_map.cend();
+    typename QMap<int, MemDesc>::const_iterator iter = m_map.begin();
 
     max = iter->addr[0];
 
     while(iter != end)
     {
-        MemDescConst const& memDesc = *iter;
+        MemDesc const& memDesc = *iter;
         for(int i = 0; i < memDesc.size; ++i)
             if(memDesc.addr[i] > max)
                 max = memDesc.addr[i];
@@ -366,26 +441,28 @@ ty CGradientMap<ty>::globalMax()const
     return max;
 }
 
+// Заполняет каждый пиксель изображения с учётом интерполяции по ближайшему соседу.
+// Считает только фрагмент изображения если включён режим увеличения.
 template<typename ty>
 void CGradientMap<ty>::updateGradientImage()
 {
     // Самый большой метод данного класса. Мог бы быть меньше, если убрать ветвление насышения.
     // Однако такое ветвление помогает несколько повысить производительность.
     // backgroundTileSize размер чередующихся чёрно-белых квадратов фонового рисунка.
-    int const width = image.width(),
-            height = image.height(),
-            backgroundTileSize = 8;
+    int const width = m_image.width(),
+            height = m_image.height(),
+            backgroundTileSize = 10;
 
     // Фактор задаёт количество пикселей на один узел.
-    float const xFactor = width / xResolution,
-            yFactor = height / yResolution;
+    float const factorX = width / m_horizontalResolution,
+            factorY = height / m_verticalResolution;
 
-    typename QMap<int, MemDescConst>::const_iterator const begin = map.cbegin();
+    typename QMap<int, MemDesc>::const_iterator const begin = m_map.cbegin();
 
     for(int j = 0; j < height; ++j)
     {
-        float const iy = (j - y) / yFactor;
-        MemDescConst const* const memDesc = (iy >= 0.0 && iy < map.size()) ? &*(begin + iy) : nullptr;
+        float const iy = (j - m_y) / factorY;
+        MemDesc const* const memDesc = (iy >= 0.0 && iy < m_map.size()) ? &*(begin + iy) : nullptr;
 
         // Здесь есть интересный момент. Сообщество Qt рекомендует использовать структуру QRgb
         // вместо прямого обращения к отдельным каналам, т.к. на разных платформах может быть
@@ -393,35 +470,35 @@ void CGradientMap<ty>::updateGradientImage()
         // обращаемся к каналам напрямую через указатель на unsigned char. Формат изображения
         // всегда фиксированный поэтому худшее что может случиться это искажения цветов.
         // Можно пробовать совсем избавиться от вызова scanLine. Меньше вызовов - быстрее отрисовка.
-        unsigned char* pixel = image.scanLine(j);
+        unsigned char* pixel = m_image.scanLine(j);
 
         for(int i = 0; i < width; ++i)
         {
-            float const ix = (i - x) / xFactor;
+            float const ix = (i - m_x) / factorX;
 
             if(memDesc != nullptr && ix >= 0.0 && ix < memDesc->size)
             {
                 float const value = static_cast<float>(memDesc->addr[static_cast<int>(ix)]);
 
                 // Войти в режим назыщения если текущее значение лежит вне диапазона.
-                if(value < min)
+                if(value < m_min)
                 {
-                    *pixel++ = coolColor.blue;
-                    *pixel++ = coolColor.green;
-                    *pixel++ = coolColor.red;
+                    *pixel++ = m_coolColor.blue;
+                    *pixel++ = m_coolColor.green;
+                    *pixel++ = m_coolColor.red;
                 }
-                else if(value > max)
+                else if(value > m_max)
                 {
-                    *pixel++ = warmColor.blue;
-                    *pixel++ = warmColor.green;
-                    *pixel++ = warmColor.red;
+                    *pixel++ = m_warmColor.blue;
+                    *pixel++ = m_warmColor.green;
+                    *pixel++ = m_warmColor.red;
                 }
                 else
                 {
-                    float const factor = (value - min) / peakToPeak;
-                    *pixel++ = coolColor.blue + differenceColor.blue * factor;
-                    *pixel++ = coolColor.green + differenceColor.green * factor;
-                    *pixel++ = coolColor.red + differenceColor.red * factor;
+                    float const factor = (value - m_min) / m_peakToPeak;
+                    *pixel++ = m_coolColor.blue + m_colorDifference.blue * factor;
+                    *pixel++ = m_coolColor.green + m_colorDifference.green * factor;
+                    *pixel++ = m_coolColor.red + m_colorDifference.red * factor;
                 }
             }
             else
@@ -443,16 +520,22 @@ void CGradientMap<ty>::mousePressEvent(QMouseEvent* event)
     switch(event->button())
     {
     case Qt::LeftButton:
-        rubberband.setTopLeft(event->pos());
-        rubberband.setBottomRight(event->pos());
-        isRubberbandShown = true;
+        // Попытаемся отправить сигнал через посредника.
+//        pointSelectedProxy(event->pos().x(), event->pos().y());
+
+        m_rubberband.setTopLeft(event->pos());
+        m_rubberband.setBottomRight(event->pos());
+        m_showRubberband = true;
         setCursor(Qt::CrossCursor);
         break;
+
     case Qt::RightButton:
-        xLastPosition = event->pos().x();
-        yLastPosition = event->pos().y();
+//        m_xLast = event->pos().x();
+//        m_yLast = event->pos().y();
+        m_lastPos = event->pos();
         setCursor(Qt::ClosedHandCursor);
         break;
+
     default:
         break;
     }
@@ -465,28 +548,36 @@ void CGradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
     {
     case Qt::LeftButton:
         // Показывать rubberband только когда его размер больше 4x4
-        rubberband.setBottomRight(event->pos());
+        m_rubberband.setBottomRight(event->pos());
         update();
+
         break;
+
     case Qt::RightButton:
         if((event->modifiers() & Qt::ShiftModifier) == 0)
-            x += event->pos().x() - xLastPosition;
+            m_x += event->pos().x() - m_lastPos.x();
 
         if((event->modifiers() & Qt::ControlModifier) == 0)
-            y += event->pos().y() - yLastPosition;
+            m_y += event->pos().y() - m_lastPos.y();
 
-        xLastPosition = event->pos().x();
-        yLastPosition = event->pos().y();
+//        m_xLast = event->pos().x();
+//        m_yLast = event->pos().y();
+
+        m_lastPos = event->pos();
 
         updateGradientImage();
         update();
+
         break;
+
     default:
-        xLastPosition = event->pos().x();
-        yLastPosition = event->pos().y();
+//        m_xLast = event->pos().x();
+//        m_yLast = event->pos().y();
+        m_lastPos = event->pos();
         // Здесь код для получения значения ткущего пикселя...
         // по пустой строке paintEvent может понять седует ли перерисовывать подсказку
         update();
+
         break;
     }
 }
@@ -497,18 +588,18 @@ void CGradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
     switch(event->button())
     {
     case Qt::LeftButton:
-        rubberband = rubberband.normalized();
+        m_rubberband = m_rubberband.normalized();
 
-        if(rubberband.width() > 4 && rubberband.height() > 4)
+        if(m_rubberband.width() > 4 && m_rubberband.height() > 4)
         {
-            float const xFactor = float(rubberband.width()) / float(image.width()),
-                    yFactor = float(rubberband.height()) / float(image.height());
+            float const xFactor = float(m_rubberband.width()) / float(m_image.width()),
+                    yFactor = float(m_rubberband.height()) / float(m_image.height());
 
-            xResolution *= xFactor;
-            yResolution *= yFactor;
+            m_horizontalResolution *= xFactor;
+            m_verticalResolution *= yFactor;
 
-            x = (x - rubberband.x()) / xFactor;
-            y = (y - rubberband.y()) / yFactor;
+            m_x = (m_x - m_rubberband.x()) / xFactor;
+            m_y = (m_y - m_rubberband.y()) / yFactor;
         }
         else
         {
@@ -518,18 +609,21 @@ void CGradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
 
         setCursor(Qt::ArrowCursor);
 
-        isRubberbandShown = false;
+        m_showRubberband = false;
 
         updateGradientImage();
         update();
         break;
+
     case Qt::RightButton:
         setCursor(Qt::ArrowCursor);
         break;
+
     case Qt::MidButton:
         // Вписать карту в рабочую облась при повторном щелчке вписать толькоцелую часть...
-        // Нет смысла обрабатывать событие нажатия кнопки, только её отпускание
+        fitContent();
         break;
+
     default:
 //        setCursor(Qt::ArrowCursor);
         break;
@@ -541,9 +635,9 @@ void CGradientMap<ty>::wheelEvent(QWheelEvent* event)
 {
     // Сообщество Qt настоятельно рекомендует принять событие если оно было обработано,
     // или отклонить его если оно не было обработано.
-    if(event->angleDelta().y() == 0 || image.width() <= 0 || image.height() <= 0)
+    if(event->angleDelta().y() == 0 || m_image.width() <= 0 || m_image.height() <= 0)
     {
-        event->ignore();
+//        event->ignore();
         return;
     }
 
@@ -556,40 +650,40 @@ void CGradientMap<ty>::wheelEvent(QWheelEvent* event)
         {
 //            x = (x - (event->pos().x() - image.width() / 4.0)) / 0.5;
 //            x -= image.width() / 2.0 - event->pos().x();
-            x = (x - event->pos().x()) / 0.5;
-            x += event->pos().x();
-            xResolution *= 0.5;
+            m_x = (m_x - event->pos().x() + m_margins.left()) / 0.5f;
+            m_x += event->pos().x() - m_margins.left();
+            m_horizontalResolution *= 0.5;
         }
 
         if((event->modifiers() & Qt::ControlModifier) == 0)
         {
 //            y = (y - (event->pos().y() - image.height() / 4.0)) / 0.5;
 //            y -= image.height() / 2.0 - event->pos().y();
-            y = (y - event->pos().y()) / 0.5;
-            y += event->pos().y();
-            yResolution *= 0.5;
+            m_y = (m_y - event->pos().y() + m_margins.top()) / 0.5f;
+            m_y += event->pos().y() - m_margins.top();
+            m_verticalResolution *= 0.5;
         }
     }
-    else
+    else if(event->angleDelta().y() < 0)
     {
         if((event->modifiers() & Qt::ShiftModifier) == 0)
         {
 //            x = (x + image.width() / 2.0) / 2.0;
-            x = (x - event->pos().x()) / 2.0;
-            x += event->pos().x();
-            xResolution *= 2.0;
+            m_x = (m_x - event->pos().x() + m_margins.left()) / 2.0f;
+            m_x += event->pos().x() - m_margins.left();
+            m_horizontalResolution *= 2.0;
         }
 
         if((event->modifiers() & Qt::ControlModifier) == 0)
         {
 //            y = (y + image.height() / 2.0) / 2.0;
-            y = (y - event->pos().y()) / 2.0;
-            y += event->pos().y();
-            yResolution *= 2.0;
+            m_y = (m_y - event->pos().y() + m_margins.top()) / 2.0f;
+            m_y += event->pos().y() - m_margins.top();
+            m_verticalResolution *= 2.0;
         }
     }
 
-    event->accept();
+//    event->accept();
 
     updateGradientImage();
     update();
@@ -599,18 +693,19 @@ template<typename ty>
 void CGradientMap<ty>::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter painter(this);
-    painter.drawImage(0, 0, image);
+
+    painter.drawImage(m_margins.left(), m_margins.top(), m_image);
 
     // Здесь код для рисования сетки...
 
     // Здесь код для рисования подписей координат...
 
-    if(isRubberbandShown)
+    if(m_showRubberband)
     {
 //        painter.setPen(Qt::black);
         painter.setCompositionMode(QPainter::RasterOp_SourceXorDestination);
         painter.setPen(QColor(0xFF, 0xFF, 0xFF));
-        painter.drawRect(rubberband);
+        painter.drawRect(m_rubberband);
     }
 
 //    if(isHintShown)
@@ -619,24 +714,21 @@ void CGradientMap<ty>::paintEvent(QPaintEvent* /*event*/)
 //    }
 }
 
-// todo: зделать чтобы угол карты смещался вслед за изменением размера
 template<typename ty>
 void CGradientMap<ty>::resizeEvent(QResizeEvent* event)
 {
-    QSize const oldSize = event->oldSize(),
-            newSize = event->size();
+    QSize const marginsSize = QSize(m_margins.left() + m_margins.right(), m_margins.top() + m_margins.bottom()),
+            imageOldSize = event->oldSize() - marginsSize,
+            imageSize = event->size() - marginsSize;
 
-    if(newSize.width() > 0 && newSize.height() > 0)
+    if(imageSize.width() > 0 && imageSize.height() > 0)
     {
-        image = QImage(width(), height(), QImage::Format_RGB32);
+        m_image = QImage(imageSize.width(), imageSize.height(), QImage::Format_RGB32);
 
-        if(oldSize.width() > 0 && oldSize.height() > 0)
+        if(imageOldSize.width() > 0 && imageOldSize.height() > 0)
         {
-            float const xFactor = x / oldSize.width(),
-                    yFactor = y / oldSize.height();
-
-            x = newSize.width() * xFactor;
-            y = newSize.height() * yFactor;
+            m_x *= static_cast<float>(imageSize.width()) / static_cast<float>(imageOldSize.width());
+            m_y *= static_cast<float>(imageSize.height()) / static_cast<float>(imageOldSize.height());
         }
 
         updateGradientImage();

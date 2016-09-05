@@ -1,4 +1,5 @@
 //#include <QThread>
+#include <QMessageBox>
 #include <QTimer>
 #include <QKeyEvent>
 #include "MainWindow.h"
@@ -10,11 +11,14 @@ int const& rowCount = 1000,
 MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 {
     gmap = new CGradientMap<int>();
+    gmap->setMargins(15, 15, 25, 25);
     gmap->setResolution(columnCount, rowCount);
     gmap->setCoolColor(32, 128, 192);
     gmap->setWarmColor(192, 96, 0);
     gmap->setMouseTracking(true);
     gmap->show();
+
+    connect(gmap, &CGradientMap<int>::pointSelected, this, &MainWindow::catchPoint);
 
 //    double* const addr = new double[4];
 //    addr[0] = 0.25;
@@ -62,6 +66,11 @@ MainWindow::~MainWindow()
 {
 //    for(int j = 0; j < 100; ++j)
 //        delete[] fvect[j];
+}
+
+void MainWindow::catchPoint(int x, int y)
+{
+    QMessageBox::about(nullptr, "", QString("x: %1\ny: %2").arg(x).arg(y));
 }
 
 void MainWindow::updateFps()
