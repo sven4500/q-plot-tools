@@ -5,20 +5,20 @@
 #include "MainWindow.h"
 #include <stdlib.h>
 
-int const& rowCount = 1000,
-    columnCount = 1000;
+int const& rowCount = 10,
+    columnCount = 10;
 
 MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 {
-    gmap = new CGradientMap<int>();
-    gmap->setMargins(15, 15, 25, 25);
-    gmap->setResolution(columnCount, rowCount);
-    gmap->setCoolColor(32, 128, 192);
-    gmap->setWarmColor(192, 96, 0);
-    gmap->setMouseTracking(true);
-    gmap->show();
+    m_map = new CGradientMap<int>();
+    m_map->setMargins(15, 15, 25, 25);
+    m_map->setResolution(columnCount, rowCount);
+    m_map->setCoolColor(32, 128, 192);
+    m_map->setWarmColor(192, 96, 0);
+    m_map->setMouseTracking(true);
+    m_map->show();
 
-    connect(gmap, &CGradientMap<int>::pointSelected, this, &MainWindow::catchPoint);
+//    connect(gmap, &CGradientMap<int>::pointSelected, this, &MainWindow::catchPoint);
 
 //    double* const addr = new double[4];
 //    addr[0] = 0.25;
@@ -40,25 +40,28 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
 //        gmap->add(j, fvect[j], 1000);
 //    }
 
-    gmap->setMin(0);
-    gmap->setMax(RAND_MAX);
+    m_map->setMin(0);
+    m_map->setMax(RAND_MAX);
 
-    ivect.resize(1000, nullptr);
+    ivect.resize(rowCount, nullptr);
+
     for(int j = 0; j < rowCount; ++j)
     {
-        ivect[j] = new int[columnCount];
-        for(int i = 0; i < columnCount; ++i)
+        int const adjustedColumnCount = columnCount + rand() % 10;
+        ivect[j] = new int[adjustedColumnCount];
+        for(int i = 0; i < adjustedColumnCount; ++i)
             ivect[j][i] = rand();
-        gmap->add(j, ivect[j], columnCount);
+        m_map->add(j, ivect[j], adjustedColumnCount/*, rand() % 20*/);
     }
 
-    gmap->updateGradientImage();
-    gmap->update();
+    m_map->updateGradientImage();
+//    m_map->update();
 
     label = new QLabel(this);
 
     QTimer* timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &MainWindow::updateFps);
+    connect(timer, &QTimer::timeout,
+            this, &MainWindow::updateFps);
     timer->start(1000);
 }
 
@@ -89,10 +92,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 //            vect[j][i] = float(rand()) / float(RAND_MAX);
 
     for(int j = 0; j < rowCount / 2; ++j)
-        gmap->swap(rand() % rowCount, rand() % rowCount);
+        m_map->swap(rand() % rowCount, rand() % rowCount);
 
-    gmap->updateGradientImage();
-    gmap->update();
+    m_map->updateGradientImage();
+    m_map->update();
 
     ++frames;
 }

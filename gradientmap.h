@@ -68,10 +68,10 @@ public:
     // со значением карты в данной точке. setMouseTracking также должен быть включен.
 //    void showHint(bool isHintShown);
 
-    // adjustContent вписывает лишь общую часть целого рисунка. adjustAllContent вписывает
-    // рисунок полностью. Может привести к выпаданию данных в некоторых скан-линиях.
-    void fitContent();
-//    void fitContentMin();
+    // fitContent(false) вписывает только общую часть всего рисунка. Может привести к
+    // маскированию хвостов некоторых скан-линий. fitContent(true) вписывает рисунок
+    // целиком. Всегда видны скан-линии целиком.
+    void fit(bool const bEntireFit = true);
 
     // Добавляет в карту очередной вектор данных, который характеризуется своим
     // дескриптором id. Замещает существующий дескриптор.
@@ -122,7 +122,7 @@ public:
 //    inline bool value(int x, int y, double* value)const;
 
 private:
-    // Описывает характеристику буфера строки: адрес буфера и его размер. Смещение
+    // Описывает буфер строки: адрес буфера и его размер. Смещение
     // характеризует исключительно способ отрисовки строки.
     struct MemDesc
     {
@@ -142,7 +142,7 @@ private:
     };
 
     // Метод для обновления разности холодного и тёплого цветов.
-    void updateDifferenceColor();
+    void updateColorDifference();
 
     virtual void mousePressEvent(QMouseEvent* event);
     virtual void mouseMoveEvent(QMouseEvent* event);
@@ -189,6 +189,8 @@ private:
     float m_horizontalResolution;
     float m_verticalResolution;
 
+    bool m_bEntireFit;
+
     bool m_showRubberband;
     bool m_showHint;
     bool m_showDynamicRange;
@@ -211,6 +213,8 @@ CGradientMap<ty>::CGradientMap(QWidget* parent): CGradientMapBase(parent)
     setCoolColor(0, 0, 0);
     setWarmColor(255, 255, 255);
 
+    m_bEntireFit = true;
+
     m_showRubberband = false;
 //    isHintShown = false;
 }
@@ -225,6 +229,7 @@ template<typename ty>
 void CGradientMap<ty>::clear()
 {
     m_map.clear();
+    updateGradientImage();
 }
 
 template<typename ty>
@@ -232,6 +237,8 @@ void CGradientMap<ty>::add(int id, ty const* addr, int size, int bias)
 {
     if(addr != nullptr && size > 0)
     {
+        // QMap тихо вставляет элемент при обращении через оператор квадратных скобок.
+        // Поэтому здесь сразу получаем ссылку на только что вставленный элемент.
         MemDesc& memDesc = m_map[id];
         memDesc.addr = addr;
         memDesc.size = size;
@@ -318,22 +325,35 @@ void CGradientMap<ty>::setMax(ty const& max)
 
 // Вписывает карту целиком в рабочую область окна.
 template<typename ty>
-void CGradientMap<ty>::fitContent()
+void CGradientMap<ty>::fit(bool const bEntireFit)
 {
     if(m_map.empty())
         return;
 
+    // Для чего здесь нужен typename?
     typename QMap<int, MemDesc>::const_iterator const end = m_map.cend();
     typename QMap<int, MemDesc>::const_iterator iter = m_map.begin();
 
     int minX = iter->bias,
             maxX = iter->size + iter->bias;
 
-    while(iter != end)
+    if(bEntireFit)
     {
-        minX = std::min(iter->bias, minX);
-        maxX = std::max(iter->size + iter->bias, maxX);
-        ++iter;
+        while(iter != end)
+        {
+            minX = std::min(iter->bias, minX);
+            maxX = std::max(iter->size + iter->bias, maxX);
+            ++iter;
+        }
+    }
+    else
+    {
+        while(iter != end)
+        {
+            minX = std::min(iter->bias, minX);
+            maxX = std::min(iter->size + iter->bias, maxX);
+            ++iter;
+        }
     }
 
     m_horizontalResolution = maxX - minX;
@@ -343,7 +363,7 @@ void CGradientMap<ty>::fitContent()
     m_y = 0.0;
 
     updateGradientImage();
-    update();
+//    update();
 }
 
 template<typename ty>
@@ -352,7 +372,7 @@ void CGradientMap<ty>::setCoolColor(int const red, int const green, int const bl
     m_coolColor.red = red;
     m_coolColor.green = green;
     m_coolColor.blue = blue;
-    updateDifferenceColor();
+    updateColorDifference();
 }
 
 template<typename ty>
@@ -361,7 +381,7 @@ void CGradientMap<ty>::setCoolColor(QColor const& color)
     m_coolColor.red = color.red();
     m_coolColor.green = color.green();
     m_coolColor.blue = color.blue();
-    updateDifferenceColor();
+    updateColorDifference();
 }
 
 template<typename ty>
@@ -370,7 +390,7 @@ void CGradientMap<ty>::setWarmColor(int const red, int const green, int const bl
     m_warmColor.red = red;
     m_warmColor.green = green;
     m_warmColor.blue = blue;
-    updateDifferenceColor();
+    updateColorDifference();
 }
 
 template<typename ty>
@@ -379,11 +399,11 @@ void CGradientMap<ty>::setWarmColor(QColor const& color)
     m_warmColor.red = color.red();
     m_warmColor.green = color.green();
     m_warmColor.blue = color.blue();
-    updateDifferenceColor();
+    updateColorDifference();
 }
 
 template<typename ty>
-void CGradientMap<ty>::updateDifferenceColor()
+void CGradientMap<ty>::updateColorDifference()
 {
     m_colorDifference.red = m_warmColor.red - m_coolColor.red;
     m_colorDifference.green = m_warmColor.green - m_coolColor.green;
@@ -474,11 +494,14 @@ void CGradientMap<ty>::updateGradientImage()
 
         for(int i = 0; i < width; ++i)
         {
+            // Здесь индекс обязан быть плавающим иначе приближаясь к границе с отрицательной стороны
+            // целый индекс станет 0 и появится дополнительный узел там где его быть не должно.
             float const ix = (i - m_x) / factorX;
 
-            if(memDesc != nullptr && ix >= 0.0 && ix < memDesc->size)
+            // Если указатель на MemDesc пустой значит нет строки.
+            if(memDesc != nullptr && ix >= memDesc->bias && ix < memDesc->size + memDesc->bias)
             {
-                float const value = static_cast<float>(memDesc->addr[static_cast<int>(ix)]);
+                float const value = static_cast<float>(memDesc->addr[static_cast<int>(ix)-memDesc->bias]);
 
                 // Войти в режим назыщения если текущее значение лежит вне диапазона.
                 if(value < m_min)
@@ -512,6 +535,8 @@ void CGradientMap<ty>::updateGradientImage()
             ++pixel;
         }
     }
+
+    update();
 }
 
 template<typename ty>
@@ -620,8 +645,8 @@ void CGradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
         break;
 
     case Qt::MidButton:
-        // Вписать карту в рабочую облась при повторном щелчке вписать толькоцелую часть...
-        fitContent();
+        fit(m_bEntireFit);
+        m_bEntireFit = !m_bEntireFit;
         break;
 
     default:
@@ -686,7 +711,7 @@ void CGradientMap<ty>::wheelEvent(QWheelEvent* event)
 //    event->accept();
 
     updateGradientImage();
-    update();
+//    update();
 }
 
 template<typename ty>
