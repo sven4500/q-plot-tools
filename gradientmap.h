@@ -49,14 +49,6 @@ template<typename ty>
 class CGradientMap: public CGradientMapBase
 {
 public:
-//    struct PlotSetting
-//    {
-//        float horizontalMin;
-//        float horizontalMax;
-//        float verticalMin;
-//        float verticalMax;
-//    };
-
     CGradientMap(QWidget* parent = nullptr);
     virtual ~CGradientMap();
 
@@ -75,7 +67,7 @@ public:
 
     // Добавляет в карту очередной вектор данных, который характеризуется своим
     // дескриптором id. Замещает существующий дескриптор.
-    void add(int id, ty const* addr, int size, int bias = 0);
+    void add(int id, ty const* addr, int size);
     void remove(int id);
 
     void swap(int id1, int id2);
@@ -183,6 +175,9 @@ private:
 //    float m_xLast;
 //    float m_yLast;
 
+    // Размер чередующихся чёрно-белых квадратов фонового рисунка.
+    int m_tileSize;
+
     QPoint m_lastPos;
 
     // Задаёт количество узлов приходящихся на полную рабочую область окна.
@@ -210,6 +205,8 @@ CGradientMap<ty>::CGradientMap(QWidget* parent): CGradientMapBase(parent)
 //    max = 1.0;
 //    peakToPeak = 1.0;
 
+    m_tileSize = 10;
+
     setCoolColor(0, 0, 0);
     setWarmColor(255, 255, 255);
 
@@ -233,7 +230,7 @@ void CGradientMap<ty>::clear()
 }
 
 template<typename ty>
-void CGradientMap<ty>::add(int id, ty const* addr, int size, int bias)
+void CGradientMap<ty>::add(int id, ty const* addr, int size)
 {
     if(addr != nullptr && size > 0)
     {
@@ -242,7 +239,6 @@ void CGradientMap<ty>::add(int id, ty const* addr, int size, int bias)
         MemDesc& memDesc = m_map[id];
         memDesc.addr = addr;
         memDesc.size = size;
-        memDesc.bias = bias;
     }
 }
 
@@ -334,29 +330,28 @@ void CGradientMap<ty>::fit(bool const bEntireFit)
     typename QMap<int, MemDesc>::const_iterator const end = m_map.cend();
     typename QMap<int, MemDesc>::const_iterator iter = m_map.begin();
 
-    int minX = iter->bias,
-            maxX = iter->size + iter->bias;
+    int maxSize = 0;
 
-    if(bEntireFit)
+    if(bEntireFit /*== true*/)
     {
+        maxSize = 0;
         while(iter != end)
         {
-            minX = std::min(iter->bias, minX);
-            maxX = std::max(iter->size + iter->bias, maxX);
+            maxSize = std::max(iter->size, maxSize);
             ++iter;
         }
     }
     else
     {
+        maxSize = std::numeric_limits<int>::max();
         while(iter != end)
         {
-            minX = std::min(iter->bias, minX);
-            maxX = std::min(iter->size + iter->bias, maxX);
+            maxSize = std::min(iter->size, maxSize);
             ++iter;
         }
     }
 
-    m_horizontalResolution = maxX - minX;
+    m_horizontalResolution = maxSize;
     m_verticalResolution = m_map.size();
 
     m_x = 0.0/*static_cast<float>(m_image.width()) * static_cast<float>(minX) / static_cast<float>(maxX - minX)*/;
@@ -468,12 +463,11 @@ void CGradientMap<ty>::updateGradientImage()
 {
     // Самый большой метод данного класса. Мог бы быть меньше, если убрать ветвление насышения.
     // Однако такое ветвление помогает несколько повысить производительность.
-    // backgroundTileSize размер чередующихся чёрно-белых квадратов фонового рисунка.
+    // tileSize размер чередующихся чёрно-белых квадратов фонового рисунка.
     int const width = m_image.width(),
-            height = m_image.height(),
-            backgroundTileSize = 10;
+            height = m_image.height();
 
-    // Фактор задаёт количество пикселей на один узел.
+    // Фактор задаёт количество пикселей на один узел (плотность точек).
     float const factorX = width / m_horizontalResolution,
             factorY = height / m_verticalResolution;
 
@@ -499,9 +493,9 @@ void CGradientMap<ty>::updateGradientImage()
             float const ix = (i - m_x) / factorX;
 
             // Если указатель на MemDesc пустой значит нет строки.
-            if(memDesc != nullptr && ix >= memDesc->bias && ix < memDesc->size + memDesc->bias)
+            if(memDesc != nullptr && ix >= 0 && ix < memDesc->size)
             {
-                float const value = static_cast<float>(memDesc->addr[static_cast<int>(ix)-memDesc->bias]);
+                float const value = static_cast<float>(memDesc->addr[static_cast<int>(ix)]);
 
                 // Войти в режим назыщения если текущее значение лежит вне диапазона.
                 if(value < m_min)
@@ -526,10 +520,10 @@ void CGradientMap<ty>::updateGradientImage()
             }
             else
             {
-                int const grayscale = ((j / backgroundTileSize + (i / backgroundTileSize) % 2) % 2 == 0) ? 192 : 255;
-                *pixel++ = grayscale;
-                *pixel++ = grayscale;
-                *pixel++ = grayscale;
+                int const greyShade = ((j / m_tileSize + (i / m_tileSize) % 2) % 2 == 0) ? 192 : 255;
+                *pixel++ = greyShade;
+                *pixel++ = greyShade;
+                *pixel++ = greyShade;
             }
 
             ++pixel;

@@ -24,7 +24,7 @@ private:
     std::vector<float*> fvect;
     std::vector<int*> ivect;
 
-    CGradientMap<int>* gmap;
+    CGradientMap<int>* m_map;
     QLabel* label;
 
     int frames;
