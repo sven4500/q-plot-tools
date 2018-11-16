@@ -1,56 +1,24 @@
-#ifndef __GRADIENTMAP_H
-#define __GRADIENTMAP_H
+#pragma once
+#ifndef GRADIENTMAP_H
+#define GRADIENTMAP_H
 
-//#include <QMarginsF>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QWidget>
 #include <QImage>
 #include <QSize>
-//#include <QColor>
 #include <QMap>
-
-// Абстрактный базовый класс для того чтобы его ребёнок мог стать шаблоном.
-// Данный метод имеет большое ограничение - он не позволяет шаблонам детей
-// этого класса иметь сигналы и слоты.
-class CGradientMapBase: public QWidget
-{
-    Q_OBJECT
-
-signals:
-    // Выпадает когда пользователь щёлкает мышью по рабочей области окна.
-    // Возвращает индекс элемента карты. Возвращает указатель на элемент
-    // данных, который можно привести к исходному типу внутри слота.
-    void pointSelected(int ix, int iy/*, void* data*/);
-
-public:
-    CGradientMapBase(QWidget* parent = nullptr): QWidget(parent)
-    {
-
-    }
-
-protected:
-    virtual ~CGradientMapBase()
-    {
-
-    }
-
-    /*void pointSelectedProxy(int ix, int iy)
-    {
-        emit pointSelected(ix, iy);
-    }*/
-
-};
+#include <GradientMapBase.h>
 
 // CGradientMap должен был стать шаблоном, однако Qt не поддерживает шаблонные классы,
 // неследованные от QWidget. Это связано с определёнными ограничениями препроцессора moc.
 // Какая жалость!
 template<typename ty>
-class CGradientMap: public CGradientMapBase
+class GradientMap: public GradientMapBase
 {
 public:
-    CGradientMap(QWidget* parent = nullptr);
-    virtual ~CGradientMap();
+    GradientMap(QWidget* parent = nullptr);
+    virtual ~GradientMap();
 
     void clear();
 
@@ -193,7 +161,7 @@ private:
 };
 
 template<typename ty>
-CGradientMap<ty>::CGradientMap(QWidget* parent): CGradientMapBase(parent)
+GradientMap<ty>::GradientMap(QWidget* parent): GradientMapBase(parent)
 {
     m_x = 0.0;
     m_y = 0.0;
@@ -217,20 +185,20 @@ CGradientMap<ty>::CGradientMap(QWidget* parent): CGradientMapBase(parent)
 }
 
 template<typename ty>
-CGradientMap<ty>::~CGradientMap()
+GradientMap<ty>::~GradientMap()
 {
 
 }
 
 template<typename ty>
-void CGradientMap<ty>::clear()
+void GradientMap<ty>::clear()
 {
     m_map.clear();
     updateGradientImage();
 }
 
 template<typename ty>
-void CGradientMap<ty>::add(int id, ty const* addr, int size)
+void GradientMap<ty>::add(int id, ty const* addr, int size)
 {
     if(addr != nullptr && size > 0)
     {
@@ -243,85 +211,85 @@ void CGradientMap<ty>::add(int id, ty const* addr, int size)
 }
 
 template<typename ty>
-void CGradientMap<ty>::remove(int id)
+void GradientMap<ty>::remove(int id)
 {
     m_map.remove(id);
 }
 
 template<typename ty>
-void CGradientMap<ty>::swap(int id1, int id2)
+void GradientMap<ty>::swap(int id1, int id2)
 {
     if(m_map.contains(id1) && m_map.contains(id2))
         std::swap(m_map[id1], m_map[id2]);
 }
 
 template<typename ty>
-void CGradientMap<ty>::setXPosition(int x)
+void GradientMap<ty>::setXPosition(int x)
 {
     m_x = x;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setYPosition(int y)
+void GradientMap<ty>::setYPosition(int y)
 {
     m_y = y;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setPosition(int x, int y)
+void GradientMap<ty>::setPosition(int x, int y)
 {
     m_x = x;
     m_y = y;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setHorizontalResolution(float resolutionX)
+void GradientMap<ty>::setHorizontalResolution(float resolutionX)
 {
     m_horizontalResolution = resolutionX;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setVerticalResolution(float resolutionY)
+void GradientMap<ty>::setVerticalResolution(float resolutionY)
 {
     m_verticalResolution = resolutionY;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setResolution(float horizontalResolution, float verticalResolution)
+void GradientMap<ty>::setResolution(float horizontalResolution, float verticalResolution)
 {
     m_horizontalResolution = horizontalResolution;
     m_verticalResolution = verticalResolution;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setMargins(int left, int top, int right, int bottom)
+void GradientMap<ty>::setMargins(int left, int top, int right, int bottom)
 {
     m_margins = QMargins(left, top, right, bottom);
 }
 
 template<typename ty>
-void CGradientMap<ty>::setMargins(QMargins const& margins)
+void GradientMap<ty>::setMargins(QMargins const& margins)
 {
     m_margins = margins;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setMin(ty const& min)
+void GradientMap<ty>::setMin(ty const& min)
 {
-    CGradientMap::m_min = static_cast<float>(min);
-    CGradientMap::m_peakToPeak = m_max - CGradientMap::m_min;
+    GradientMap::m_min = static_cast<float>(min);
+    GradientMap::m_peakToPeak = m_max - GradientMap::m_min;
 }
 
 template<typename ty>
-void CGradientMap<ty>::setMax(ty const& max)
+void GradientMap<ty>::setMax(ty const& max)
 {
-    CGradientMap::m_max = static_cast<float>(max);
-    CGradientMap::m_peakToPeak = CGradientMap::m_max - m_min;
+    GradientMap::m_max = static_cast<float>(max);
+    GradientMap::m_peakToPeak = GradientMap::m_max - m_min;
 }
 
 // Вписывает карту целиком в рабочую область окна.
 template<typename ty>
-void CGradientMap<ty>::fit(bool const bEntireFit)
+void GradientMap<ty>::fit(bool const bEntireFit)
 {
     if(m_map.empty())
         return;
@@ -362,7 +330,7 @@ void CGradientMap<ty>::fit(bool const bEntireFit)
 }
 
 template<typename ty>
-void CGradientMap<ty>::setCoolColor(int const red, int const green, int const blue)
+void GradientMap<ty>::setCoolColor(int const red, int const green, int const blue)
 {
     m_coolColor.red = red;
     m_coolColor.green = green;
@@ -371,7 +339,7 @@ void CGradientMap<ty>::setCoolColor(int const red, int const green, int const bl
 }
 
 template<typename ty>
-void CGradientMap<ty>::setCoolColor(QColor const& color)
+void GradientMap<ty>::setCoolColor(QColor const& color)
 {
     m_coolColor.red = color.red();
     m_coolColor.green = color.green();
@@ -380,7 +348,7 @@ void CGradientMap<ty>::setCoolColor(QColor const& color)
 }
 
 template<typename ty>
-void CGradientMap<ty>::setWarmColor(int const red, int const green, int const blue)
+void GradientMap<ty>::setWarmColor(int const red, int const green, int const blue)
 {
     m_warmColor.red = red;
     m_warmColor.green = green;
@@ -389,7 +357,7 @@ void CGradientMap<ty>::setWarmColor(int const red, int const green, int const bl
 }
 
 template<typename ty>
-void CGradientMap<ty>::setWarmColor(QColor const& color)
+void GradientMap<ty>::setWarmColor(QColor const& color)
 {
     m_warmColor.red = color.red();
     m_warmColor.green = color.green();
@@ -398,7 +366,7 @@ void CGradientMap<ty>::setWarmColor(QColor const& color)
 }
 
 template<typename ty>
-void CGradientMap<ty>::updateColorDifference()
+void GradientMap<ty>::updateColorDifference()
 {
     m_colorDifference.red = m_warmColor.red - m_coolColor.red;
     m_colorDifference.green = m_warmColor.green - m_coolColor.green;
@@ -406,7 +374,7 @@ void CGradientMap<ty>::updateColorDifference()
 }
 
 template<typename ty>
-ty CGradientMap<ty>::globalMin()const
+ty GradientMap<ty>::globalMin()const
 {
     ty min;
 
@@ -432,7 +400,7 @@ ty CGradientMap<ty>::globalMin()const
 }
 
 template<typename ty>
-ty CGradientMap<ty>::globalMax()const
+ty GradientMap<ty>::globalMax()const
 {
     ty max;
 
@@ -459,7 +427,7 @@ ty CGradientMap<ty>::globalMax()const
 // Заполняет каждый пиксель изображения с учётом интерполяции по ближайшему соседу.
 // Считает только фрагмент изображения если включён режим увеличения.
 template<typename ty>
-void CGradientMap<ty>::updateGradientImage()
+void GradientMap<ty>::updateGradientImage()
 {
     // Самый большой метод данного класса. Мог бы быть меньше, если убрать ветвление насышения.
     // Однако такое ветвление помогает несколько повысить производительность.
@@ -534,7 +502,7 @@ void CGradientMap<ty>::updateGradientImage()
 }
 
 template<typename ty>
-void CGradientMap<ty>::mousePressEvent(QMouseEvent* event)
+void GradientMap<ty>::mousePressEvent(QMouseEvent* event)
 {
     switch(event->button())
     {
@@ -562,7 +530,7 @@ void CGradientMap<ty>::mousePressEvent(QMouseEvent* event)
 }
 
 template<typename ty>
-void CGradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
+void GradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
 {
     switch(event->buttons())
     {
@@ -603,7 +571,7 @@ void CGradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
 }
 
 template<typename ty>
-void CGradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
+void GradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
 {
     switch(event->button())
     {
@@ -651,7 +619,7 @@ void CGradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
 }
 
 template<typename ty>
-void CGradientMap<ty>::wheelEvent(QWheelEvent* event)
+void GradientMap<ty>::wheelEvent(QWheelEvent* event)
 {
     // Сообщество Qt настоятельно рекомендует принять событие если оно было обработано,
     // или отклонить его если оно не было обработано.
@@ -710,7 +678,7 @@ void CGradientMap<ty>::wheelEvent(QWheelEvent* event)
 }
 
 template<typename ty>
-void CGradientMap<ty>::paintEvent(QPaintEvent* /*event*/)
+void GradientMap<ty>::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter painter(this);
 
@@ -735,7 +703,7 @@ void CGradientMap<ty>::paintEvent(QPaintEvent* /*event*/)
 }
 
 template<typename ty>
-void CGradientMap<ty>::resizeEvent(QResizeEvent* event)
+void GradientMap<ty>::resizeEvent(QResizeEvent* event)
 {
     QSize const marginsSize = QSize(m_margins.left() + m_margins.right(), m_margins.top() + m_margins.bottom()),
             imageOldSize = event->oldSize() - marginsSize,
