@@ -8,7 +8,8 @@
 #include <QImage>
 #include <QSize>
 #include <QMap>
-#include <GradientMapBase.h>
+#include <gradientmapbase.h>
+//#include <abstractpainter.h>
 
 // CGradientMap должен был стать шаблоном, однако Qt не поддерживает шаблонные классы,
 // неследованные от QWidget. Это связано с определёнными ограничениями препроцессора moc.
@@ -107,11 +108,10 @@ private:
     virtual void mousePressEvent(QMouseEvent* event);
     virtual void mouseMoveEvent(QMouseEvent* event);
     virtual void mouseReleaseEvent(QMouseEvent* event);
-
     virtual void wheelEvent(QWheelEvent* event);
-
-    virtual void paintEvent(QPaintEvent* event);
     virtual void resizeEvent(QResizeEvent* event);
+
+    void drawAll(QPainter& painter);
 
     // Думаю здесь использовать QMap более уместно вместо QVector. QVector приводит к фрагментации
     // памяти при каждом добавлении очередного вектора данных. QMap в свою очередь хранит данные
@@ -163,6 +163,11 @@ private:
 template<typename ty>
 GradientMap<ty>::GradientMap(QWidget* parent): GradientMapBase(parent)
 {
+    {
+        PaintFunc const func = reinterpret_cast<PaintFunc>(&GradientMap::drawAll);
+        addToRenderQueue(func);
+    }
+
     m_x = 0.0;
     m_y = 0.0;
 
@@ -678,10 +683,8 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
 }
 
 template<typename ty>
-void GradientMap<ty>::paintEvent(QPaintEvent* /*event*/)
+void GradientMap<ty>::drawAll(QPainter& painter)
 {
-    QPainter painter(this);
-
     painter.drawImage(m_margins.left(), m_margins.top(), m_image);
 
     // Здесь код для рисования сетки...

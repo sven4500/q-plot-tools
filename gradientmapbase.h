@@ -2,11 +2,11 @@
 #ifndef GRADIENTMAPBASE_H
 #define GRADIENTMAPBASE_H
 
-#include <QWidget>
+#include <abstractpainter.h>
 
 // Абстрактный базовый класс для того чтобы его ребёнок мог стать шаблоном. Данный метод имеет большое ограничение -
 // он не позволяет шаблонам детей этого класса иметь сигналы и слоты. Однако взамен мы имеем очень мощный инструмент.
-class GradientMapBase: public QWidget
+class GradientMapBase: public AbstractPainter
 {
 
     Q_OBJECT
@@ -17,14 +17,12 @@ signals:
     // указатель на элемент данных, который можно привести к исходному типу внутри слота.
     void pointSelected(int ix, int iy/*, void* data*/);
 
-public:
+protected:
 
-    GradientMapBase(QWidget* parent = nullptr): QWidget(parent)
+    GradientMapBase(QWidget* parent = nullptr): AbstractPainter(parent)
     {
 
     }
-
-protected:
 
     virtual ~GradientMapBase()
     {
