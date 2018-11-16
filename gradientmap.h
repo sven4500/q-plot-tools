@@ -35,10 +35,10 @@ protected:
 
     }
 
-    void pointSelectedProxy(int ix, int iy/*, void* data*/)
+    /*void pointSelectedProxy(int ix, int iy)
     {
         emit pointSelected(ix, iy);
-    }
+    }*/
 
 };
 
@@ -546,6 +546,7 @@ void CGradientMap<ty>::mousePressEvent(QMouseEvent* event)
         m_rubberband.setBottomRight(event->pos());
         m_showRubberband = true;
         setCursor(Qt::CrossCursor);
+        emit pointSelected(event->pos().x(), event->pos().y());
         break;
 
     case Qt::RightButton:
