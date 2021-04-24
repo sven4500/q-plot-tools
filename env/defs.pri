@@ -17,6 +17,3 @@ HEADERS += \
     $$SRCDIR/gradientmap.h \
     $$SRCDIR/gradientmapbase.h \
     $$SRCDIR/abstractpainter.h
-
-SOURCES += \
-    $$SRCDIR/abstractpainter.cpp
