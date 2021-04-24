@@ -70,9 +70,6 @@ public:
     ty globalMin()const;
     ty globalMax()const;
 
-    void setMargins(int left, int top, int right, int bottom);
-    void setMargins(QMargins const& margins);
-
     // Данные добавляются в карту по-строчно. Чтобы избежать ненужной перерисовки
     // каждый раз когда добваляется очередной вектор
     /*virtual*/ void updateGradientImage();
@@ -264,18 +261,6 @@ void GradientMap<ty>::setResolution(float horizontalResolution, float verticalRe
 {
     m_horizontalResolution = horizontalResolution;
     m_verticalResolution = verticalResolution;
-}
-
-template<typename ty>
-void GradientMap<ty>::setMargins(int left, int top, int right, int bottom)
-{
-    m_margins = QMargins(left, top, right, bottom);
-}
-
-template<typename ty>
-void GradientMap<ty>::setMargins(QMargins const& margins)
-{
-    m_margins = margins;
 }
 
 template<typename ty>
