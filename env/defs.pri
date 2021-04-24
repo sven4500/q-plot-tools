@@ -14,6 +14,8 @@ INCLUDEPATH += \
     $$SRCDIR
 
 HEADERS += \
-    $$SRCDIR/gradientmap.h \
+    $$SRCDIR/abstractpainter.h \
     $$SRCDIR/gradientmapbase.h \
-    $$SRCDIR/abstractpainter.h
+    $$SRCDIR/gradientmap.h \
+    $$SRCDIR/graph2dbase.h \
+    $$SRCDIR/graph2d.h
