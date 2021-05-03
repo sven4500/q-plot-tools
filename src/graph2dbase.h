@@ -17,7 +17,7 @@ public:
     Graph2DBase(QWidget* parent = nullptr):
         AbstractPainter(parent)
     {
-
+        setMouseTracking(true);
     }
 
     virtual ~Graph2DBase()
@@ -57,6 +57,11 @@ protected:
         double _maxY;
 
     };
+
+    virtual void mouseMoveEvent(QMouseEvent* event)
+    {
+        Q_UNUSED(event)
+    }
 
     double minX()const
     {

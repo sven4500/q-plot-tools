@@ -3,7 +3,6 @@
 #define GRAPH2D_H
 
 #include <QFontMetrics>
-#include <QtMath> // qFabs, qPow
 #include <QColor>
 #include <QMap>
 #include <QPoint>
@@ -50,9 +49,10 @@ protected:
     };
 
     static double niceNumber(double number, bool round);
-    static double step(double min, double max, int numTicks);
+    static double niceStep(double min, double max, int numTicks);
 
     void drawGrid(QPainter& painter);
+    void drawGridLabels(QPainter& painter);
     void drawCurves(QPainter& painter);
 
     static int const _numTicks = 10;
@@ -69,8 +69,8 @@ template<typename ty>
 Graph2D<ty>::Graph2D(QWidget* parent):
     Graph2DBase(parent)
 {
-    _stepX = step(_viewRegion._minX, _viewRegion._maxX, _numTicks);
-    _stepY = step(_viewRegion._minY, _viewRegion._maxY, _numTicks);
+    _stepX = niceStep(_viewRegion._minX, _viewRegion._maxX, _numTicks);
+    _stepY = niceStep(_viewRegion._minY, _viewRegion._maxY, _numTicks);
 
     QFontMetrics const metrics(font());
 
@@ -82,9 +82,8 @@ Graph2D<ty>::Graph2D(QWidget* parent):
     setContentsMargins(contentsLeft, contentsTop, contentsRight, contentsBottom);
 
     addToRenderQueue(reinterpret_cast<PaintFunc>(&drawGrid));
+    addToRenderQueue(reinterpret_cast<PaintFunc>(&drawGridLabels));
     addToRenderQueue(reinterpret_cast<PaintFunc>(&drawCurves));
-
-    setMouseTracking(true);
 }
 
 template<typename ty>
@@ -96,8 +95,6 @@ Graph2D<ty>::~Graph2D()
 template<typename ty>
 void Graph2D<ty>::drawGrid(QPainter& painter)
 {
-    QFontMetrics const metrics(font());
-
     QPen darkPen(Qt::black, 1, Qt::SolidLine);
     QPen lightPen(Qt::gray, 1, Qt::DashLine);
 
@@ -112,12 +109,6 @@ void Graph2D<ty>::drawGrid(QPainter& painter)
 
         painter.setPen(lightPen);
         painter.drawLine(pixel.x(), contentsRect().top(), pixel.x(), contentsRect().bottom());
-
-        QString const number = QString::number(x);
-        int const lineWidth = metrics.width(number);
-
-        painter.setPen(darkPen);
-        painter.drawText(pixel.x() - lineWidth / 2, contentsRect().bottom() + metrics.xHeight(), lineWidth, metrics.lineSpacing(), Qt::AlignLeft | Qt::AlignTop, number);
     }
 
     for(int i = 0; i < _numTicks; ++i)
@@ -129,16 +120,56 @@ void Graph2D<ty>::drawGrid(QPainter& painter)
 
         painter.setPen(lightPen);
         painter.drawLine(contentsRect().left(), pixel.y(), contentsRect().right(), pixel.y());
-
-        QString const number = QString::number(y);
-        int const lineWidth = metrics.width(number);
-
-        painter.setPen(darkPen);
-        painter.drawText(contentsRect().left() - lineWidth - metrics.averageCharWidth(), pixel.y() - metrics.lineSpacing() / 2, lineWidth, metrics.lineSpacing(), Qt::AlignRight | Qt::AlignTop, number);
     }
 
     painter.setPen(darkPen);
     painter.drawRect(contentsRect().adjusted(0, 0, -1, -1));
+}
+
+template<typename ty>
+void Graph2D<ty>::drawGridLabels(QPainter& painter)
+{
+    QFontMetrics const metrics(font());
+
+    for(int i = 0; i < _numTicks; ++i)
+    {
+        double const x = _viewRegion._minX + _stepX * i;
+        double const y = 0.0;
+
+        QPoint const pixel = toPixel(QPointF(x, y));
+
+        QString const number = QString::number(x);
+        int const lineWidth = metrics.width(number);
+
+        QRect const rect = {
+            pixel.x() - lineWidth / 2,
+            contentsRect().bottom() + metrics.xHeight(),
+            lineWidth,
+            metrics.lineSpacing()
+        };
+
+        painter.drawText(rect, Qt::AlignLeft | Qt::AlignTop, number);
+    }
+
+    for(int i = 0; i < _numTicks; ++i)
+    {
+        double const x = 0.0;
+        double const y = _viewRegion._minY + _stepY * i;
+
+        QPoint const pixel = toPixel(QPointF(x, y));
+
+        QString const number = QString::number(y);
+        int const lineWidth = metrics.width(number);
+
+        QRect const rect {
+            contentsRect().left() - lineWidth - metrics.averageCharWidth(),
+            pixel.y() - metrics.lineSpacing() / 2,
+            lineWidth,
+            metrics.lineSpacing()
+        };
+
+        painter.drawText(rect, Qt::AlignRight | Qt::AlignTop, number);
+    }
 }
 
 template<typename ty>
@@ -187,7 +218,7 @@ double Graph2D<ty>::niceNumber(double number, bool round)
 }
 
 template<typename ty>
-double Graph2D<ty>::step(double min, double max, int numTicks)
+double Graph2D<ty>::niceStep(double min, double max, int numTicks)
 {
     return niceNumber(std::abs(max - min) / (numTicks - 1), true);
 }
