@@ -21,8 +21,12 @@ protected:
     AbstractPainter(QWidget* parent = nullptr):
         QWidget(parent)
     {
-        PaintFunc const func = reinterpret_cast<PaintFunc>(&AbstractPainter::paintBackground);
-        addToRenderQueue(func);
+        QPalette pal = palette();
+        pal.setColor(QPalette::Window, Qt::white);
+
+        setPalette(pal);
+
+        addToRenderQueue(reinterpret_cast<PaintFunc>(&AbstractPainter::paintBackground));
     }
 
     virtual ~AbstractPainter()
@@ -33,7 +37,15 @@ protected:
     virtual void paintEvent(QPaintEvent* event)
     {
         Q_UNUSED(event);
+
         QPainter painter(this);
+
+        if(contentsRect().isEmpty())
+        {
+            paintBackground(painter);
+            return;
+        }
+
         for(int i = 0; i < _renderQueue.size(); ++i)
         {
             painter.save();
@@ -57,7 +69,7 @@ protected:
     // Метод является базовой реализацией закрашивания фона в белый цвет.
     void paintBackground(QPainter& painter)
     {
-        painter.fillRect(0, 0, width(), height(), Qt::white);
+        painter.fillRect(0, 0, width(), height(), palette().window());
     }
 
 private:
