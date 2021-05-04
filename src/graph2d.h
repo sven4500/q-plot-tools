@@ -49,17 +49,15 @@ protected:
     };
 
     static double niceNumber(double number, bool round);
-    static double niceStep(double min, double max, int numTicks);
 
     void drawGrid(QPainter& painter);
-    void drawGridLabels(QPainter& painter);
     void drawCurves(QPainter& painter);
 
     static int const _numTicks = 10;
 
+    QFontMetrics _metrics;
     QMap<int, Curve2D> _curves;
 
-    // Эти поля хранят шаг по осям для экономии аремени.
     double _stepX;
     double _stepY;
 
@@ -67,22 +65,22 @@ protected:
 
 template<typename ty>
 Graph2D<ty>::Graph2D(QWidget* parent):
-    Graph2DBase(parent)
+    Graph2DBase(parent), _metrics(font())
 {
-    _stepX = niceStep(_viewRegion._minX, _viewRegion._maxX, _numTicks);
-    _stepY = niceStep(_viewRegion._minY, _viewRegion._maxY, _numTicks);
+    double const rangeX = niceNumber(_viewRegion.spanX(), false);
+    double const rangeY = niceNumber(_viewRegion.spanY(), false);
 
-    QFontMetrics const metrics(font());
+    _stepX = niceNumber(rangeX / (_numTicks - 1), true);
+    _stepY = niceNumber(rangeY / (_numTicks - 1), true);
 
-    int const contentsLeft = 10 * metrics.averageCharWidth();
-    int const contentsTop = 3 * metrics.lineSpacing();
-    int const contentsRight = 5 * metrics.averageCharWidth();
-    int const contentsBottom = 3 * metrics.lineSpacing();
+    int const contentsLeft = 10 * _metrics.averageCharWidth();
+    int const contentsTop = 3 * _metrics.lineSpacing();
+    int const contentsRight = 5 * _metrics.averageCharWidth();
+    int const contentsBottom = 3 * _metrics.lineSpacing();
 
     setContentsMargins(contentsLeft, contentsTop, contentsRight, contentsBottom);
 
     addToRenderQueue(reinterpret_cast<PaintFunc>(&drawGrid));
-    addToRenderQueue(reinterpret_cast<PaintFunc>(&drawGridLabels));
     addToRenderQueue(reinterpret_cast<PaintFunc>(&drawCurves));
 }
 
@@ -98,78 +96,66 @@ void Graph2D<ty>::drawGrid(QPainter& painter)
     QPen darkPen(Qt::black, 1, Qt::SolidLine);
     QPen lightPen(Qt::gray, 1, Qt::DashLine);
 
-    //painter.setClipRect(contentsRect());
+    double x = std::floor(_viewRegion._minX / _stepX) * _stepX;
+    double y = 0.0;
 
     for(int i = 0; i < _numTicks; ++i)
     {
-        double const x = _viewRegion._minX + _stepX * i;
-        double const y = 0.0;
+        x += _stepX;
 
         QPoint const pixel = toPixel(QPointF(x, y));
 
         painter.setPen(lightPen);
         painter.drawLine(pixel.x(), contentsRect().top(), pixel.x(), contentsRect().bottom());
+
+        if(true)
+        {
+            QString const number = QString::number(x);
+            int const lineWidth = _metrics.width(number);
+
+            QRect const rect = {
+                pixel.x() - lineWidth / 2,
+                contentsRect().bottom() + _metrics.xHeight(),
+                lineWidth,
+                _metrics.lineSpacing()
+            };
+
+            painter.setPen(darkPen);
+            painter.drawText(rect, Qt::AlignLeft | Qt::AlignTop, number);
+        }
     }
+
+    x = 0.0;
+    y = std::floor(_viewRegion._minY / _stepY) * _stepY;
 
     for(int i = 0; i < _numTicks; ++i)
     {
-        double const x = 0.0;
-        double const y = _viewRegion._minY + _stepY * i;
+        y += _stepY;
 
         QPoint const pixel = toPixel(QPointF(x, y));
 
         painter.setPen(lightPen);
         painter.drawLine(contentsRect().left(), pixel.y(), contentsRect().right(), pixel.y());
+
+        if(true)
+        {
+            QString const number = QString::number(y);
+            int const lineWidth = _metrics.width(number);
+
+            QRect const rect {
+                contentsRect().left() - lineWidth - _metrics.averageCharWidth(),
+                pixel.y() - _metrics.lineSpacing() / 2,
+                lineWidth,
+                _metrics.lineSpacing()
+            };
+
+            painter.setPen(darkPen);
+            painter.drawText(rect, Qt::AlignRight | Qt::AlignTop, number);
+        }
     }
 
     painter.setPen(darkPen);
     painter.drawRect(contentsRect().adjusted(0, 0, -1, -1));
-}
-
-template<typename ty>
-void Graph2D<ty>::drawGridLabels(QPainter& painter)
-{
-    QFontMetrics const metrics(font());
-
-    for(int i = 0; i < _numTicks; ++i)
-    {
-        double const x = _viewRegion._minX + _stepX * i;
-        double const y = 0.0;
-
-        QPoint const pixel = toPixel(QPointF(x, y));
-
-        QString const number = QString::number(x);
-        int const lineWidth = metrics.width(number);
-
-        QRect const rect = {
-            pixel.x() - lineWidth / 2,
-            contentsRect().bottom() + metrics.xHeight(),
-            lineWidth,
-            metrics.lineSpacing()
-        };
-
-        painter.drawText(rect, Qt::AlignLeft | Qt::AlignTop, number);
-    }
-
-    for(int i = 0; i < _numTicks; ++i)
-    {
-        double const x = 0.0;
-        double const y = _viewRegion._minY + _stepY * i;
-
-        QPoint const pixel = toPixel(QPointF(x, y));
-
-        QString const number = QString::number(y);
-        int const lineWidth = metrics.width(number);
-
-        QRect const rect {
-            contentsRect().left() - lineWidth - metrics.averageCharWidth(),
-            pixel.y() - metrics.lineSpacing() / 2,
-            lineWidth,
-            metrics.lineSpacing()
-        };
-
-        painter.drawText(rect, Qt::AlignRight | Qt::AlignTop, number);
-    }
 }
 
 template<typename ty>
@@ -215,12 +201,6 @@ double Graph2D<ty>::niceNumber(double number, bool round)
     }
 
     return nf * std::pow(10.0, exp);
-}
-
-template<typename ty>
-double Graph2D<ty>::niceStep(double min, double max, int numTicks)
-{
-    return niceNumber(std::abs(max - min) / (numTicks - 1), true);
 }
 
 #endif

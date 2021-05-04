@@ -4,6 +4,7 @@
 
 #include <QPoint>
 #include <QPointF>
+#include <QMouseEvent>
 #include <abstractpainter.h>
 
 class Graph2DBase: public AbstractPainter
@@ -58,9 +59,47 @@ protected:
 
     };
 
+    virtual void mousePressEvent(QMouseEvent* event)
+    {
+        switch(event->button())
+        {
+        case Qt::RightButton:
+            setCursor(Qt::ClosedHandCursor);
+            _dragPoint = toPoint(event->pos());
+            break;
+
+        default:
+            break;
+        }
+    }
+
     virtual void mouseMoveEvent(QMouseEvent* event)
     {
-        Q_UNUSED(event)
+        QPointF point = toPoint(event->pos());
+
+        switch(event->buttons())
+        {
+        case Qt::RightButton:
+            point -= _dragPoint;
+
+            _viewRegion._minX -= point.x();
+            _viewRegion._maxX -= point.x();
+
+            _viewRegion._minY -= point.y();
+            _viewRegion._maxY -= point.y();
+
+            update();
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    virtual void mouseReleaseEvent(QMouseEvent* event)
+    {
+        Q_UNUSED(event);
+        unsetCursor();
     }
 
     double minX()const
@@ -128,6 +167,9 @@ protected:
     }
 
     ViewRegion2D _viewRegion;
+
+private:
+    QPointF _dragPoint;
 
 };
 
