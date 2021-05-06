@@ -73,6 +73,12 @@ protected:
         }
     }
 
+    virtual void mouseReleaseEvent(QMouseEvent* event)
+    {
+        Q_UNUSED(event);
+        unsetCursor();
+    }
+
     virtual void mouseMoveEvent(QMouseEvent* event)
     {
         QPointF point = toPoint(event->pos());
@@ -96,10 +102,41 @@ protected:
         }
     }
 
-    virtual void mouseReleaseEvent(QMouseEvent* event)
+    virtual void wheelEvent(QWheelEvent* event)
     {
-        Q_UNUSED(event);
-        unsetCursor();
+        if(!event->angleDelta().isNull())
+        {
+            QPointF const point = toPoint(event->pos());
+
+            // angleDelta возвращает 1/8 долей градуса.
+            auto const angle = event->angleDelta().y() / 8;
+
+            double const factor = std::abs(angle > 0.0 ? angle / 30.0 : angle / 10.0);
+
+            if((event->modifiers() & Qt::ShiftModifier) == 0)
+            {
+                double const deltaSpanX = _viewRegion.spanX() - _viewRegion.spanX() * factor;
+
+                double const x1 = (point.x() - _viewRegion._minX) / _viewRegion.spanX();
+                double const x2 = 1.0 - x1;
+
+                _viewRegion._minX += deltaSpanX * x1;
+                _viewRegion._maxX -= deltaSpanX * x2;
+            }
+
+            if((event->modifiers() & Qt::ControlModifier) == 0)
+            {
+                double const deltaSpanY = _viewRegion.spanY() - _viewRegion.spanY() * factor;
+
+                double const y1 = (point.y() - _viewRegion._minY) / _viewRegion.spanY();
+                double const y2 = 1.0 - y1;
+
+                _viewRegion._minY += deltaSpanY * y1;
+                _viewRegion._maxY -= deltaSpanY * y2;
+            }
+
+            update();
+        }
     }
 
     double minX()const
@@ -160,8 +197,8 @@ protected:
         double const kX = _viewRegion.spanX() / rect.width();
         double const kY = _viewRegion.spanY() / rect.height();
 
-        double const x = double(pixel.x() - rect.x()) * kX + _viewRegion._minX;
-        double const y = double(rect.height() - pixel.y()) * kY + _viewRegion._minY;
+        double const x = (pixel.x() - rect.left()) * kX + _viewRegion._minX;
+        double const y = (rect.bottom() - pixel.y()) * kY + _viewRegion._minY;
 
         return QPointF(x, y);
     }
