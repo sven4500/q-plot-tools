@@ -18,35 +18,11 @@ public:
     MainWidget(QWidget* parent = nullptr):
         QWidget(parent)
     {
-        auto numPoints = 200;
-
-        QVector<float> yy(numPoints);
-
-        for(auto i = 0; i < numPoints; ++i)
-        {
-            yy[i] = std::sin((M_PI / numPoints) * i);
-        }
-
-        QVector<float> x(numPoints), y(numPoints);
-
-        for(auto i = 0; i < numPoints; ++i)
-        {
-            x[i] = (M_PI / numPoints) * i;
-            y[i] = std::sin(x[i]);
-        }
-
-        QVector<QPointF> xy(numPoints);
-
-        for(auto i = 0; i < numPoints; ++i)
-        {
-            xy[i].setX((M_PI / numPoints) * i);
-            xy[i].setY(std::cos(xy[i].x()));
-        }
-
         _graph = new Graph2D<float>(this);
-        _graph->addCurve(x, y);
-        _graph->addCurve(yy, Qt::red);
-        _graph->addCurve(xy, Qt::blue);
+
+        addCurve1(_graph);
+        addCurve2(_graph);
+        addCurve3(_graph);
 
         QGridLayout* const layout = new QGridLayout(this);
         layout->setMargin(0);
@@ -64,6 +40,51 @@ public:
     }
 
 private:
+    static void addCurve1(Graph2D<float>* graph)
+    {
+        auto const numPoints = 200;
+        QVector<float> y(numPoints);
+
+        for(auto i = 0; i < numPoints; ++i)
+        {
+            y[i] = std::sin((M_PI / numPoints) * i);
+        }
+
+        auto const id = graph->addCurve(y, Qt::red);
+        graph->setStyle(id, Qt::DashLine);
+        graph->setWidth(id, 2);
+    }
+
+    static void addCurve2(Graph2D<float>* graph)
+    {
+        auto const numPoints = 200;
+        QVector<float> x(numPoints), y(numPoints);
+
+        for(auto i = 0; i < numPoints; ++i)
+        {
+            x[i] = (M_PI / numPoints) * i;
+            y[i] = std::sin(x[i]);
+        }
+
+        auto const id = graph->addCurve(x, y);
+        graph->setWidth(id, 3);
+    }
+
+    static void addCurve3(Graph2D<float>* graph)
+    {
+        auto const numPoints = 200;
+        QVector<QPointF> xy(numPoints);
+
+        for(auto i = 0; i < numPoints; ++i)
+        {
+            xy[i].setX((M_PI / numPoints) * i);
+            xy[i].setY(std::cos(xy[i].x()));
+        }
+
+        auto const id = graph->addCurve(xy, Qt::blue);
+        graph->setColor(id, Qt::green);
+    }
+
     Graph2D<float>* _graph;
 
 };

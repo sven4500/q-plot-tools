@@ -22,6 +22,10 @@ public:
 
     void removeCurve(int id);
 
+    void setColor(int id, QColor const& color);
+    void setStyle(int id, Qt::PenStyle style);
+    void setWidth(int id, int width);
+
 protected:
     /*!
      * \brief The Curve2D struct
@@ -172,6 +176,43 @@ int Graph2D<ty>::addCurve(QVector<QPointF> const& xy, QColor const& color)
     }
 
     return id;
+}
+
+template<typename ty>
+void Graph2D<ty>::removeCurve(int id)
+{
+    _curves.remove(id);
+    update();
+}
+
+template<typename ty>
+void Graph2D<ty>::setColor(int id, QColor const& color)
+{
+    if(_curves.contains(id))
+    {
+        _curves[id]._pen.setColor(color);
+        update();
+    }
+}
+
+template<typename ty>
+void Graph2D<ty>::setStyle(int id, Qt::PenStyle style)
+{
+    if(_curves.contains(id))
+    {
+        _curves[id]._pen.setStyle(style);
+        update();
+    }
+}
+
+template<typename ty>
+void Graph2D<ty>::setWidth(int id, int width)
+{
+    if(_curves.contains(id))
+    {
+        _curves[id]._pen.setWidth(width);
+        update();
+    }
 }
 
 template<typename ty>
