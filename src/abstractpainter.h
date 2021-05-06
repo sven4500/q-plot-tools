@@ -15,18 +15,28 @@ class AbstractPainter: public QWidget
 {
     Q_OBJECT
 
+public:
+    void stopRender()
+    {
+        _renderOut = false;
+    }
+
+    void resumeRender()
+    {
+        _renderOut = true;
+        update();
+    }
+
 protected:
     typedef void (AbstractPainter::*PaintFunc)(QPainter& painter);
 
     AbstractPainter(QWidget* parent = nullptr):
-        QWidget(parent)
+        QWidget(parent), _renderOut(true)
     {
         QPalette pal = palette();
         pal.setColor(QPalette::Window, Qt::white);
 
         setPalette(pal);
-
-        addToRenderQueue(reinterpret_cast<PaintFunc>(&AbstractPainter::paintBackground));
     }
 
     virtual ~AbstractPainter()
@@ -38,26 +48,32 @@ protected:
     {
         Q_UNUSED(event);
 
-        QPainter painter(this);
-
-        if(contentsRect().isEmpty())
+        if(_renderOut)
         {
+            QPainter painter(this);
+
             paintBackground(painter);
-            return;
-        }
 
-        for(int i = 0; i < _renderQueue.size(); ++i)
-        {
-            painter.save();
-            (this->*_renderQueue[i])(painter);
-            painter.restore();
+            if(contentsRect().isValid())
+            {
+                for(auto paintFunc : _renderQueue)
+                {
+                    painter.save();
+                    (this->*paintFunc)(painter);
+                    painter.restore();
+                }
+            }
         }
     }
 
     void addToRenderQueue(PaintFunc func)
     {
         _renderQueue.append(func);
-        //update();
+    }
+
+    void removeFromRenderQueue(PaintFunc func)
+    {
+        _renderQueue.removeAll(func);
     }
 
     void clearRenderQueue()
@@ -66,15 +82,14 @@ protected:
         //update();
     }
 
-    // Метод является базовой реализацией закрашивания фона в белый цвет.
     void paintBackground(QPainter& painter)
     {
         painter.fillRect(0, 0, width(), height(), palette().window());
     }
 
 private:
-
     QVector<PaintFunc> _renderQueue;
+    bool _renderOut;
 
 };
 
