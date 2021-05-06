@@ -16,35 +16,26 @@ public:
     Graph2D(QWidget* parent = nullptr);
     virtual ~Graph2D();
 
+    int addCurve(QVector<ty> const& y, QColor const& color = defaultColor);
+    int addCurve(QVector<ty> const& x, QVector<ty> const& y, QColor const& color = defaultColor);
+    int addCurve(QVector<QPointF> const& xy, QColor const& color = defaultColor);
+
+    void removeCurve(int id);
+
 protected:
     /*!
      * \brief The Curve2D struct
-     *
-     * Структура кодирует.ровно одну кривую в 2D плоскости. Координаты каждой
-     * точки храняться в массиве _memX и _memY.
      */
     struct Curve2D
     {
         Curve2D():
-            _memX(nullptr), _memY(nullptr),
-            _modifyX(1), _modifyY(1),
-            _count(0)
+            _pen(Qt::black, 1, Qt::SolidLine)
         {
-            _color = QColor(255, 127, 39);
+
         }
 
-        QColor _color;
-
-        // Если один из источников не задан будет сгенерирована
-        // последовательность [0..count].
-        ty const* _memX;
-        ty const* _memY;
-
-        // Расстояние между элементами.
-        int _modifyX;
-        int _modifyY;
-
-        int _count;
+        QVector<QPointF> _points;
+        QPen _pen;
 
     };
 
@@ -53,15 +44,22 @@ protected:
     void drawGrid(QPainter& painter);
     void drawCurves(QPainter& painter);
 
+    int getNonexistingId()const;
+
+    static QColor const defaultColor;
     static int const _numTicks = 10;
 
     QFontMetrics _metrics;
+
     QMap<int, Curve2D> _curves;
 
     double _stepX;
     double _stepY;
 
 };
+
+template<typename ty>
+QColor const Graph2D<ty>::defaultColor = QColor(255, 127, 39);
 
 template<typename ty>
 Graph2D<ty>::Graph2D(QWidget* parent):
@@ -88,6 +86,92 @@ template<typename ty>
 Graph2D<ty>::~Graph2D()
 {
 
+}
+
+template<typename ty>
+int Graph2D<ty>::getNonexistingId()const
+{
+    int counter = 0;
+
+    // Ключи в карте отсортированы в порядке возрастания. Кривые могут быть
+    // добавлены и удалены во время жизни объекта. Если кривая была удалена,
+    // образуется пустое место. Функция ищет пустое место.
+
+    for(auto iter = _curves.cbegin(); iter != _curves.cend(); ++iter)
+    {
+        if(iter.key() != counter)
+        {
+            return counter;
+        }
+
+        ++counter;
+    }
+
+    return counter;
+}
+
+template<typename ty>
+int Graph2D<ty>::addCurve(QVector<ty> const& y, QColor const& color)
+{
+    int const id = getNonexistingId();
+
+    if(id >= 0)
+    {
+        Curve2D& curve = _curves[id];
+
+        auto const size = y.size();
+        curve._points.resize(size);
+
+        for(auto i = 0; i < size; ++i)
+        {
+            curve._points[i].setX(i);
+            curve._points[i].setY(y[i]);
+        }
+
+        curve._pen.setColor(color);
+    }
+
+    return id;
+}
+
+template<typename ty>
+int Graph2D<ty>::addCurve(QVector<ty> const& x, QVector<ty> const& y, QColor const& color)
+{
+    int const id = getNonexistingId();
+
+    if(id >= 0)
+    {
+        Curve2D& curve = _curves[id];
+
+        auto const size = std::min(x.size(), y.size());
+        curve._points.resize(size);
+
+        for(auto i = 0; i < size; ++i)
+        {
+            curve._points[i].setX(x[i]);
+            curve._points[i].setY(y[i]);
+        }
+
+        curve._pen.setColor(color);
+    }
+
+    return id;
+}
+
+template<typename ty>
+int Graph2D<ty>::addCurve(QVector<QPointF> const& xy, QColor const& color)
+{
+    int const id = getNonexistingId();
+
+    if(id >= 0)
+    {
+        Curve2D& curve = _curves[id];
+
+        curve._points = xy;
+        curve._pen.setColor(color);
+    }
+
+    return id;
 }
 
 template<typename ty>
@@ -161,7 +245,23 @@ void Graph2D<ty>::drawGrid(QPainter& painter)
 template<typename ty>
 void Graph2D<ty>::drawCurves(QPainter& painter)
 {
-    Q_UNUSED(painter);
+    QVector<QPoint> polyline;
+
+    for(auto const& curve : _curves)
+    {
+        if(polyline.size() < curve._points.count())
+        {
+            polyline.resize(curve._points.count());
+        }
+
+        for(auto i = 0; i < curve._points.count(); ++i)
+        {
+            polyline[i] = toPixel(curve._points[i]);
+        }
+
+        painter.setPen(curve._pen);
+        painter.drawPolyline(&polyline[0], curve._points.count());
+    }
 }
 
 template<typename ty>
