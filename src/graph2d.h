@@ -84,6 +84,7 @@ Graph2D<ty>::Graph2D(QWidget* parent):
 
     addToRenderQueue(reinterpret_cast<PaintFunc>(&drawGrid));
     addToRenderQueue(reinterpret_cast<PaintFunc>(&drawCurves));
+    addToRenderQueue(reinterpret_cast<PaintFunc>(&drawRubberband));
 }
 
 template<typename ty>

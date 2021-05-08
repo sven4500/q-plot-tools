@@ -56,57 +56,65 @@ protected:
 
     virtual void mousePressEvent(QMouseEvent* event)
     {
-        switch(event->button())
+        if(event->button() == Qt::LeftButton)
         {
-        case Qt::LeftButton:
             setCursor(Qt::CrossCursor);
             _rubberband.setTopLeft(event->pos());
             _rubberband.setBottomRight(event->pos());
-            break;
-
-        case Qt::RightButton:
+        }
+        else
+        if(event->button() == Qt::RightButton)
+        {
             setCursor(Qt::ClosedHandCursor);
             _dragPoint = toPoint(event->pos());
-            break;
-
-        default:
-            break;
         }
     }
 
     virtual void mouseReleaseEvent(QMouseEvent* event)
     {
-        switch(event->button())
+        if(event->button() == Qt::LeftButton)
         {
-        case Qt::LeftButton:
             unsetCursor();
+
+            QPointF const topLeft = toPoint(_rubberband.topLeft());
+            QPointF const bottomRight = toPoint(_rubberband.bottomRight());
+
+            _viewRegion._minX = std::min(topLeft.x(), bottomRight.x());
+            _viewRegion._maxX = std::max(topLeft.x(), bottomRight.x());
+
+            _viewRegion._minY = std::min(topLeft.y(), bottomRight.y());
+            _viewRegion._maxY = std::max(topLeft.y(), bottomRight.y());
+
+            // Выделяющий прямоугольник больше не будет отрисован.
             _rubberband.setTopLeft(event->pos());
             _rubberband.setBottomRight(event->pos());
-            update();
-            break;
 
-        case Qt::RightButton:
+            update();
+        }
+        else
+        if(event->button() == Qt::RightButton)
+        {
             unsetCursor();
             update();
-            break;
-
-        default:
-            break;
         }
     }
 
     virtual void mouseMoveEvent(QMouseEvent* event)
     {
-        QPointF const distance = toPoint(event->pos()) - _dragPoint;
-
-        switch(event->buttons())
+        if(event->buttons() == Qt::LeftButton)
         {
-        case Qt::LeftButton:
-            _rubberband.setBottomRight(event->pos());
-            update();
-            break;
+            if(contentsRect().adjusted(-1, -1, -1, -1).contains(event->pos()))
+            {
+                _rubberband.setBottomRight(event->pos());
+            }
 
-        case Qt::RightButton:
+            update();
+        }
+        else
+        if(event->buttons() == Qt::RightButton)
+        {
+            QPointF const distance = toPoint(event->pos()) - _dragPoint;
+
             if((event->modifiers() & Qt::ShiftModifier) == 0)
             {
                 _viewRegion._minX -= distance.x();
@@ -120,10 +128,6 @@ protected:
             }
 
             update();
-            break;
-
-        default:
-            break;
         }
     }
 
@@ -204,7 +208,7 @@ protected:
 
     void drawRubberband(QPainter& painter)
     {
-        if(_rubberband.width() > 4 && _rubberband.height() > 4)
+        if(std::abs(_rubberband.width()) > 4 && std::abs(_rubberband.height()) > 4)
         {
             painter.setCompositionMode(QPainter::RasterOp_SourceXorDestination);
             painter.setPen(Qt::white);
