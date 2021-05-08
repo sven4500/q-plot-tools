@@ -89,11 +89,17 @@ protected:
         case Qt::RightButton:
             point -= _dragPoint;
 
-            _viewRegion._minX -= point.x();
-            _viewRegion._maxX -= point.x();
+            if((event->modifiers() & Qt::ShiftModifier) == 0)
+            {
+                _viewRegion._minX -= point.x();
+                _viewRegion._maxX -= point.x();
+            }
 
-            _viewRegion._minY -= point.y();
-            _viewRegion._maxY -= point.y();
+            if((event->modifiers() & Qt::ControlModifier) == 0)
+            {
+                _viewRegion._minY -= point.y();
+                _viewRegion._maxY -= point.y();
+            }
 
             update();
             break;
@@ -205,8 +211,6 @@ protected:
     }
 
     ViewRegion2D _viewRegion;
-
-private:
     QPointF _dragPoint;
 
 };
