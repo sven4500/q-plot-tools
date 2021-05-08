@@ -1,38 +1,32 @@
 #pragma once
-#ifndef GRAPH2DBASE_H
-#define GRAPH2DBASE_H
+#ifndef AXES2D_H
+#define AXES2D_H
 
 #include <QPoint>
 #include <QPointF>
 #include <QMouseEvent>
 #include <abstractpainter.h>
 
-class Graph2DBase: public AbstractPainter
+class Axes2D: public AbstractPainter
 {
     Q_OBJECT
 
 signals:
-    void pointSelected(int x, int y, void* point);
+    void pointSelected(int x, int y);
 
 public:
-    Graph2DBase(QWidget* parent = nullptr):
+    Axes2D(QWidget* parent = nullptr):
         AbstractPainter(parent)
     {
         setMouseTracking(true);
     }
 
-    virtual ~Graph2DBase()
+    virtual ~Axes2D()
     {
 
     }
 
 protected:
-    /*!
-     * \brief The ViewRegion2D struct
-     *
-     * Структура описывает область видимости 2D пространства. Задаёт видимый
-     * отрезок по осям X и Y.
-     */
     struct ViewRegion2D
     {
         ViewRegion2D():
@@ -75,8 +69,15 @@ protected:
 
     virtual void mouseReleaseEvent(QMouseEvent* event)
     {
-        Q_UNUSED(event);
-        unsetCursor();
+        switch(event->button())
+        {
+        case Qt::RightButton:
+            unsetCursor();
+            break;
+
+        default:
+                break;
+        }
     }
 
     virtual void mouseMoveEvent(QMouseEvent* event)

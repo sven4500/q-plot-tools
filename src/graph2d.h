@@ -10,7 +10,7 @@
 #include <graph2dbase.h>
 
 template<typename ty>
-class Graph2D: public Graph2DBase
+class Graph2D: public Axes2D
 {
 public:
     Graph2D(QWidget* parent = nullptr);
@@ -67,7 +67,7 @@ QColor const Graph2D<ty>::defaultColor = QColor(255, 127, 39);
 
 template<typename ty>
 Graph2D<ty>::Graph2D(QWidget* parent):
-    Graph2DBase(parent), _metrics(font())
+    Axes2D(parent), _metrics(font())
 {
     double const rangeX = niceNumber(_viewRegion.spanX(), false);
     double const rangeY = niceNumber(_viewRegion.spanY(), false);
