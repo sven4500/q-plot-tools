@@ -8,14 +8,13 @@
 #include <QImage>
 #include <QSize>
 #include <QMap>
-#include <gradientmapbase.h>
-//#include <abstractpainter.h>
+#include <axes2d.h>
 
-// CGradientMap должен был стать шаблоном, однако Qt не поддерживает шаблонные классы,
-// неследованные от QWidget. Это связано с определёнными ограничениями препроцессора moc.
-// Какая жалость!
+// GradientMap должен быть шаблоном, однако Qt не поддерживает шаблонные
+// классы, неследованные напрямую от QWidget. Это связано с определёнными
+// ограничениями репроцессора moc.
 template<typename ty>
-class GradientMap: public GradientMapBase
+class GradientMap: public Axes2D
 {
 public:
     GradientMap(QWidget* parent = nullptr);
@@ -116,8 +115,6 @@ private:
     QMap<int, MemDesc> m_map;
     QImage m_image;
 
-    QMargins m_margins;
-
     QRect m_rubberband;
 //    QString hint;
 
@@ -158,12 +155,15 @@ private:
 };
 
 template<typename ty>
-GradientMap<ty>::GradientMap(QWidget* parent): GradientMapBase(parent)
+GradientMap<ty>::GradientMap(QWidget* parent):
+    Axes2D(parent)
 {
     {
         PaintFunc const func = reinterpret_cast<PaintFunc>(&GradientMap::drawAll);
         addToRenderQueue(func);
     }
+
+    setContentsMargins(10, 10, 10, 10);
 
     m_x = 0.0;
     m_y = 0.0;
@@ -619,6 +619,8 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         return;
     }
 
+    QRect const& margins = contentsRect();
+
     // Прокрутка колеса от себя (положительные значения дельта угла) - приблизить.
     // Алгоритм не учитывает степень (силу) прокрутки. Каждая прокрутка увеличивает
     // или уменьшает изображение в два раза.
@@ -628,8 +630,8 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         {
 //            x = (x - (event->pos().x() - image.width() / 4.0)) / 0.5;
 //            x -= image.width() / 2.0 - event->pos().x();
-            m_x = (m_x - event->pos().x() + m_margins.left()) / 0.5f;
-            m_x += event->pos().x() - m_margins.left();
+            m_x = (m_x - event->pos().x() + margins.left()) / 0.5f;
+            m_x += event->pos().x() - margins.left();
             m_horizontalResolution *= 0.5;
         }
 
@@ -637,8 +639,8 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         {
 //            y = (y - (event->pos().y() - image.height() / 4.0)) / 0.5;
 //            y -= image.height() / 2.0 - event->pos().y();
-            m_y = (m_y - event->pos().y() + m_margins.top()) / 0.5f;
-            m_y += event->pos().y() - m_margins.top();
+            m_y = (m_y - event->pos().y() + margins.top()) / 0.5f;
+            m_y += event->pos().y() - margins.top();
             m_verticalResolution *= 0.5;
         }
     }
@@ -647,16 +649,16 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         if((event->modifiers() & Qt::ShiftModifier) == 0)
         {
 //            x = (x + image.width() / 2.0) / 2.0;
-            m_x = (m_x - event->pos().x() + m_margins.left()) / 2.0f;
-            m_x += event->pos().x() - m_margins.left();
+            m_x = (m_x - event->pos().x() + margins.left()) / 2.0f;
+            m_x += event->pos().x() - margins.left();
             m_horizontalResolution *= 2.0;
         }
 
         if((event->modifiers() & Qt::ControlModifier) == 0)
         {
 //            y = (y + image.height() / 2.0) / 2.0;
-            m_y = (m_y - event->pos().y() + m_margins.top()) / 2.0f;
-            m_y += event->pos().y() - m_margins.top();
+            m_y = (m_y - event->pos().y() + margins.top()) / 2.0f;
+            m_y += event->pos().y() - margins.top();
             m_verticalResolution *= 2.0;
         }
     }
@@ -670,7 +672,9 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
 template<typename ty>
 void GradientMap<ty>::drawAll(QPainter& painter)
 {
-    painter.drawImage(m_margins.left(), m_margins.top(), m_image);
+    QRect const& margins = contentsRect();
+
+    painter.drawImage(margins.left(), margins.top(), m_image);
 
     // Здесь код для рисования сетки...
 
@@ -693,9 +697,11 @@ void GradientMap<ty>::drawAll(QPainter& painter)
 template<typename ty>
 void GradientMap<ty>::resizeEvent(QResizeEvent* event)
 {
-    QSize const marginsSize = QSize(m_margins.left() + m_margins.right(), m_margins.top() + m_margins.bottom()),
-            imageOldSize = event->oldSize() - marginsSize,
-            imageSize = event->size() - marginsSize;
+    QRect const& margins = contentsRect();
+
+    QSize const marginsSize = QSize(width() - margins.width(), height() - margins.height()),
+        imageOldSize = event->oldSize() - marginsSize,
+        imageSize = event->size() - marginsSize;
 
     if(imageSize.width() > 0 && imageSize.height() > 0)
     {
