@@ -129,8 +129,8 @@ private:
 
     // x и y обозначают пиксель верхнего левого угла картинки. Возникает ошибка округления
     // при изменении размера рабочей области окна, когда x и y имеют тип int?
-    float m_x;
-    float m_y;
+    double m_x;
+    double m_y;
 
     // Точка на которую указывал указатель мыши перед нажатием кнопки мыши.
     // Используются только методами обработки событий мыши.
@@ -139,8 +139,6 @@ private:
 
     // Размер чередующихся чёрно-белых квадратов фонового рисунка.
     int m_tileSize;
-
-    QPoint m_lastPos;
 
     // Задаёт количество узлов приходящихся на полную рабочую область окна.
     float m_horizontalResolution;
@@ -165,8 +163,13 @@ GradientMap<ty>::GradientMap(QWidget* parent):
 
     setContentsMargins(10, 10, 10, 10);
 
-    m_x = 0.0;
-    m_y = 0.0;
+    // Карта сторится сверху вниз, поэтому ось Y инвертирована.
+    _viewRegion._maxY = 0.0;
+    _viewRegion._minY = -1.0;
+
+    // Координата x, y находится не в окне поэтому убираем смещение рамки.
+    m_x = toPixel(QPointF(0.0, 0.0)).x() - contentsRect().x();
+    m_y = toPixel(QPointF(0.0, 0.0)).y() - contentsRect().y();
 
     m_horizontalResolution = 1.0;
     m_verticalResolution = 1.0;
@@ -494,24 +497,15 @@ void GradientMap<ty>::updateGradientImage()
 template<typename ty>
 void GradientMap<ty>::mousePressEvent(QMouseEvent* event)
 {
+    Axes2D::mousePressEvent(event);
+
     switch(event->button())
     {
     case Qt::LeftButton:
-        // Попытаемся отправить сигнал через посредника.
-//        pointSelectedProxy(event->pos().x(), event->pos().y());
-
+        setCursor(Qt::CrossCursor);
         m_rubberband.setTopLeft(event->pos());
         m_rubberband.setBottomRight(event->pos());
-        m_showRubberband = true;
-        setCursor(Qt::CrossCursor);
         emit pointSelected(event->pos().x(), event->pos().y());
-        break;
-
-    case Qt::RightButton:
-//        m_xLast = event->pos().x();
-//        m_yLast = event->pos().y();
-        m_lastPos = event->pos();
-        setCursor(Qt::ClosedHandCursor);
         break;
 
     default:
@@ -522,40 +516,27 @@ void GradientMap<ty>::mousePressEvent(QMouseEvent* event)
 template<typename ty>
 void GradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
 {
+    Axes2D::mouseMoveEvent(event);
+
     switch(event->buttons())
     {
     case Qt::LeftButton:
-        // Показывать rubberband только когда его размер больше 4x4
         m_rubberband.setBottomRight(event->pos());
-        update();
-
+        if(m_rubberband.width() > 4 && m_rubberband.height() > 4)
+        {
+            m_showRubberband = true;
+            update();
+        }
         break;
 
     case Qt::RightButton:
-        if((event->modifiers() & Qt::ShiftModifier) == 0)
-            m_x += event->pos().x() - m_lastPos.x();
-
-        if((event->modifiers() & Qt::ControlModifier) == 0)
-            m_y += event->pos().y() - m_lastPos.y();
-
-//        m_xLast = event->pos().x();
-//        m_yLast = event->pos().y();
-
-        m_lastPos = event->pos();
-
+        m_x = toPixel(QPointF(0.0, 0.0)).x() - contentsRect().x();
+        m_y = toPixel(QPointF(0.0, 0.0)).y() - contentsRect().y();
         updateGradientImage();
         update();
-
         break;
 
     default:
-//        m_xLast = event->pos().x();
-//        m_yLast = event->pos().y();
-        m_lastPos = event->pos();
-        // Здесь код для получения значения ткущего пикселя...
-        // по пустой строке paintEvent может понять седует ли перерисовывать подсказку
-        update();
-
         break;
     }
 }
@@ -563,6 +544,8 @@ void GradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
 template<typename ty>
 void GradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
 {
+    Axes2D::mouseReleaseEvent(event);
+
     switch(event->button())
     {
     case Qt::LeftButton:
@@ -593,17 +576,12 @@ void GradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
         update();
         break;
 
-    case Qt::RightButton:
-        setCursor(Qt::ArrowCursor);
-        break;
-
     case Qt::MidButton:
         fit(m_bEntireFit);
         m_bEntireFit = !m_bEntireFit;
         break;
 
     default:
-//        setCursor(Qt::ArrowCursor);
         break;
     }
 }
