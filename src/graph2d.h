@@ -288,6 +288,8 @@ void Graph2D<ty>::drawCurves(QPainter& painter)
 {
     QVector<QPoint> polyline;
 
+    painter.setClipRect(contentsRect().adjusted(1, 1, -1, -1));
+
     for(auto const& curve : _curves)
     {
         if(polyline.size() < curve._points.count())
