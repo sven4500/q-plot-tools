@@ -7,7 +7,7 @@
 #include <QMap>
 #include <QPoint>
 #include <QPointF>
-#include <graph2dbase.h>
+#include <axes2d.h>
 
 template<typename ty>
 class Graph2D: public Axes2D
