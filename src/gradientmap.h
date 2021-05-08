@@ -107,16 +107,13 @@ private:
     virtual void wheelEvent(QWheelEvent* event);
     virtual void resizeEvent(QResizeEvent* event);
 
-    void drawAll(QPainter& painter);
+    void drawImage(QPainter& painter);
 
     // Думаю здесь использовать QMap более уместно вместо QVector. QVector приводит к фрагментации
     // памяти при каждом добавлении очередного вектора данных. QMap в свою очередь хранит данные
     // в разных областях памяти. Добавление и удаление здесь быстрее.
     QMap<int, MemDesc> m_map;
     QImage m_image;
-
-    QRect m_rubberband;
-//    QString hint;
 
     Color m_coolColor;
     Color m_warmColor;
@@ -127,8 +124,9 @@ private:
     float m_max;
     float m_peakToPeak;
 
-    // x и y обозначают пиксель верхнего левого угла картинки. Возникает ошибка округления
-    // при изменении размера рабочей области окна, когда x и y имеют тип int?
+    // x и y обозначают пиксель верхнего левого угла картинки. Возникает ошибка
+    // округления при изменении размера рабочей области окна, когда x и y имеют
+    // тип int.
     double m_x;
     double m_y;
 
@@ -146,7 +144,6 @@ private:
 
     bool m_bEntireFit;
 
-    bool m_showRubberband;
     bool m_showHint;
     bool m_showDynamicRange;
 
@@ -156,10 +153,8 @@ template<typename ty>
 GradientMap<ty>::GradientMap(QWidget* parent):
     Axes2D(parent)
 {
-    {
-        PaintFunc const func = reinterpret_cast<PaintFunc>(&GradientMap::drawAll);
-        addToRenderQueue(func);
-    }
+    addToRenderQueue(reinterpret_cast<PaintFunc>(&GradientMap::drawImage));
+    addToRenderQueue(reinterpret_cast<PaintFunc>(&GradientMap::drawRubberband));
 
     setContentsMargins(10, 10, 10, 10);
 
@@ -184,9 +179,6 @@ GradientMap<ty>::GradientMap(QWidget* parent):
     setWarmColor(255, 255, 255);
 
     m_bEntireFit = true;
-
-    m_showRubberband = false;
-//    isHintShown = false;
 }
 
 template<typename ty>
@@ -502,9 +494,6 @@ void GradientMap<ty>::mousePressEvent(QMouseEvent* event)
     switch(event->button())
     {
     case Qt::LeftButton:
-        setCursor(Qt::CrossCursor);
-        m_rubberband.setTopLeft(event->pos());
-        m_rubberband.setBottomRight(event->pos());
         emit pointSelected(event->pos().x(), event->pos().y());
         break;
 
@@ -520,15 +509,6 @@ void GradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
 
     switch(event->buttons())
     {
-    case Qt::LeftButton:
-        m_rubberband.setBottomRight(event->pos());
-        if(m_rubberband.width() > 4 && m_rubberband.height() > 4)
-        {
-            m_showRubberband = true;
-            update();
-        }
-        break;
-
     case Qt::RightButton:
         m_x = toPixel(QPointF(0.0, 0.0)).x() - contentsRect().x();
         m_y = toPixel(QPointF(0.0, 0.0)).y() - contentsRect().y();
@@ -549,28 +529,24 @@ void GradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
     switch(event->button())
     {
     case Qt::LeftButton:
-        m_rubberband = m_rubberband.normalized();
+        _rubberband = _rubberband.normalized();
 
-        if(m_rubberband.width() > 4 && m_rubberband.height() > 4)
+        if(_rubberband.width() > 4 && _rubberband.height() > 4)
         {
-            float const xFactor = float(m_rubberband.width()) / float(m_image.width()),
-                    yFactor = float(m_rubberband.height()) / float(m_image.height());
+            float const xFactor = float(_rubberband.width()) / float(m_image.width()),
+                    yFactor = float(_rubberband.height()) / float(m_image.height());
 
             m_horizontalResolution *= xFactor;
             m_verticalResolution *= yFactor;
 
-            m_x = (m_x - m_rubberband.x()) / xFactor;
-            m_y = (m_y - m_rubberband.y()) / yFactor;
+            m_x = (m_x - _rubberband.x()) / xFactor;
+            m_y = (m_y - _rubberband.y()) / yFactor;
         }
         else
         {
             // Сигнализировать выбор узла...
             // emit nodeSelected();
         }
-
-        setCursor(Qt::ArrowCursor);
-
-        m_showRubberband = false;
 
         updateGradientImage();
         update();
@@ -648,28 +624,10 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
 }
 
 template<typename ty>
-void GradientMap<ty>::drawAll(QPainter& painter)
+void GradientMap<ty>::drawImage(QPainter& painter)
 {
     QRect const& margins = contentsRect();
-
     painter.drawImage(margins.left(), margins.top(), m_image);
-
-    // Здесь код для рисования сетки...
-
-    // Здесь код для рисования подписей координат...
-
-    if(m_showRubberband)
-    {
-//        painter.setPen(Qt::black);
-        painter.setCompositionMode(QPainter::RasterOp_SourceXorDestination);
-        painter.setPen(QColor(0xFF, 0xFF, 0xFF));
-        painter.drawRect(m_rubberband);
-    }
-
-//    if(isHintShown)
-//    {
-//        painter.drawText(xLastPosition, yLastPosition, "TEXT");
-//    }
 }
 
 template<typename ty>

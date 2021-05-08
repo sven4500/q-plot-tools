@@ -4,6 +4,7 @@
 
 #include <QPoint>
 #include <QPointF>
+#include <QRect>
 #include <QMouseEvent>
 #include <abstractpainter.h>
 
@@ -57,6 +58,12 @@ protected:
     {
         switch(event->button())
         {
+        case Qt::LeftButton:
+            setCursor(Qt::CrossCursor);
+            _rubberband.setTopLeft(event->pos());
+            _rubberband.setBottomRight(event->pos());
+            break;
+
         case Qt::RightButton:
             setCursor(Qt::ClosedHandCursor);
             _dragPoint = toPoint(event->pos());
@@ -71,34 +78,45 @@ protected:
     {
         switch(event->button())
         {
+        case Qt::LeftButton:
+            unsetCursor();
+            _rubberband.setTopLeft(event->pos());
+            _rubberband.setBottomRight(event->pos());
+            update();
+            break;
+
         case Qt::RightButton:
             unsetCursor();
+            update();
             break;
 
         default:
-                break;
+            break;
         }
     }
 
     virtual void mouseMoveEvent(QMouseEvent* event)
     {
-        QPointF point = toPoint(event->pos());
+        QPointF const distance = toPoint(event->pos()) - _dragPoint;
 
         switch(event->buttons())
         {
-        case Qt::RightButton:
-            point -= _dragPoint;
+        case Qt::LeftButton:
+            _rubberband.setBottomRight(event->pos());
+            update();
+            break;
 
+        case Qt::RightButton:
             if((event->modifiers() & Qt::ShiftModifier) == 0)
             {
-                _viewRegion._minX -= point.x();
-                _viewRegion._maxX -= point.x();
+                _viewRegion._minX -= distance.x();
+                _viewRegion._maxX -= distance.x();
             }
 
             if((event->modifiers() & Qt::ControlModifier) == 0)
             {
-                _viewRegion._minY -= point.y();
-                _viewRegion._maxY -= point.y();
+                _viewRegion._minY -= distance.y();
+                _viewRegion._maxY -= distance.y();
             }
 
             update();
@@ -184,6 +202,16 @@ protected:
         }
     }
 
+    void drawRubberband(QPainter& painter)
+    {
+        if(_rubberband.width() > 4 && _rubberband.height() > 4)
+        {
+            painter.setCompositionMode(QPainter::RasterOp_SourceXorDestination);
+            painter.setPen(Qt::white);
+            painter.drawRect(_rubberband);
+        }
+    }
+
     QPoint toPixel(QPointF const& point)const
     {
         QRect const& rect = contentsRect();
@@ -211,6 +239,7 @@ protected:
     }
 
     ViewRegion2D _viewRegion;
+    QRect _rubberband;
     QPointF _dragPoint;
 
 };
