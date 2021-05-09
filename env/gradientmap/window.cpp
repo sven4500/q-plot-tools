@@ -52,7 +52,6 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent)
     }
 
     _gmap->updateGradientImage();
-//    m_map->update();
 
     _label = new QLabel(this);
 
@@ -92,7 +91,6 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         _gmap->swap(rand() % rowCount, rand() % rowCount);
 
     _gmap->updateGradientImage();
-    _gmap->update();
 
     ++_frames;
 }
