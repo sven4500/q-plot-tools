@@ -124,17 +124,6 @@ private:
     float m_max;
     float m_peakToPeak;
 
-    // x и y обозначают пиксель верхнего левого угла картинки. Возникает ошибка
-    // округления при изменении размера рабочей области окна, когда x и y имеют
-    // тип int.
-    double m_x;
-    double m_y;
-
-    // Точка на которую указывал указатель мыши перед нажатием кнопки мыши.
-    // Используются только методами обработки событий мыши.
-//    float m_xLast;
-//    float m_yLast;
-
     // Размер чередующихся чёрно-белых квадратов фонового рисунка.
     int m_tileSize;
 
@@ -161,10 +150,6 @@ GradientMap<ty>::GradientMap(QWidget* parent):
     // Карта сторится сверху вниз, поэтому ось Y инвертирована.
     _viewRegion._maxY = 0.0;
     _viewRegion._minY = -1.0;
-
-    // Координата x, y находится не в окне поэтому убираем смещение рамки.
-    m_x = toPixel(QPointF(0.0, 0.0)).x() - contentsRect().x();
-    m_y = toPixel(QPointF(0.0, 0.0)).y() - contentsRect().y();
 
     m_horizontalResolution = 1.0;
     m_verticalResolution = 1.0;
@@ -218,25 +203,6 @@ void GradientMap<ty>::swap(int id1, int id2)
 {
     if(m_map.contains(id1) && m_map.contains(id2))
         std::swap(m_map[id1], m_map[id2]);
-}
-
-template<typename ty>
-void GradientMap<ty>::setXPosition(int x)
-{
-    m_x = x;
-}
-
-template<typename ty>
-void GradientMap<ty>::setYPosition(int y)
-{
-    m_y = y;
-}
-
-template<typename ty>
-void GradientMap<ty>::setPosition(int x, int y)
-{
-    m_x = x;
-    m_y = y;
 }
 
 template<typename ty>
@@ -306,9 +272,6 @@ void GradientMap<ty>::fit(bool const bEntireFit)
 
     m_horizontalResolution = maxSize;
     m_verticalResolution = m_map.size();
-
-    m_x = 0.0/*static_cast<float>(m_image.width()) * static_cast<float>(minX) / static_cast<float>(maxX - minX)*/;
-    m_y = 0.0;
 
     updateGradientImage();
 //    update();
@@ -420,6 +383,10 @@ void GradientMap<ty>::updateGradientImage()
     int const width = m_image.width(),
             height = m_image.height();
 
+    // Координата x, y находится не в окне поэтому убираем смещение рамки.
+    double const cordX = toPixel(QPointF(0.0, 0.0)).x() - contentsRect().x();
+    double const cordY = toPixel(QPointF(0.0, 0.0)).y() - contentsRect().y();
+
     // Фактор задаёт количество пикселей на один узел (плотность точек).
     float const factorX = width / m_horizontalResolution,
             factorY = height / m_verticalResolution;
@@ -428,7 +395,7 @@ void GradientMap<ty>::updateGradientImage()
 
     for(int j = 0; j < height; ++j)
     {
-        float const iy = (j - m_y) / factorY;
+        float const iy = (j - cordY) / factorY;
         MemDesc const* const memDesc = (iy >= 0.0 && iy < m_map.size()) ? &*(begin + iy) : nullptr;
 
         // Здесь есть интересный момент. Сообщество Qt рекомендует использовать структуру QRgb
@@ -443,7 +410,7 @@ void GradientMap<ty>::updateGradientImage()
         {
             // Здесь индекс обязан быть плавающим иначе приближаясь к границе с отрицательной стороны
             // целый индекс станет 0 и появится дополнительный узел там где его быть не должно.
-            float const ix = (i - m_x) / factorX;
+            float const ix = (i - cordX) / factorX;
 
             // Если указатель на MemDesc пустой значит нет строки.
             if(memDesc != nullptr && ix >= 0 && ix < memDesc->size)
@@ -510,8 +477,6 @@ void GradientMap<ty>::mouseMoveEvent(QMouseEvent* event)
     switch(event->buttons())
     {
     case Qt::RightButton:
-        m_x = toPixel(QPointF(0.0, 0.0)).x() - contentsRect().x();
-        m_y = toPixel(QPointF(0.0, 0.0)).y() - contentsRect().y();
         updateGradientImage();
         update();
         break;
@@ -538,9 +503,6 @@ void GradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
 
             m_horizontalResolution *= xFactor;
             m_verticalResolution *= yFactor;
-
-            m_x = (m_x - _rubberband.x()) / xFactor;
-            m_y = (m_y - _rubberband.y()) / yFactor;
         }
         else
         {
@@ -565,6 +527,8 @@ void GradientMap<ty>::mouseReleaseEvent(QMouseEvent* event)
 template<typename ty>
 void GradientMap<ty>::wheelEvent(QWheelEvent* event)
 {
+    Axes2D::wheelEvent(event);
+
     // Сообщество Qt настоятельно рекомендует принять событие если оно было обработано,
     // или отклонить его если оно не было обработано.
     if(event->angleDelta().y() == 0 || m_image.width() <= 0 || m_image.height() <= 0)
@@ -572,8 +536,6 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
 //        event->ignore();
         return;
     }
-
-    QRect const& margins = contentsRect();
 
     // Прокрутка колеса от себя (положительные значения дельта угла) - приблизить.
     // Алгоритм не учитывает степень (силу) прокрутки. Каждая прокрутка увеличивает
@@ -584,8 +546,6 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         {
 //            x = (x - (event->pos().x() - image.width() / 4.0)) / 0.5;
 //            x -= image.width() / 2.0 - event->pos().x();
-            m_x = (m_x - event->pos().x() + margins.left()) / 0.5f;
-            m_x += event->pos().x() - margins.left();
             m_horizontalResolution *= 0.5;
         }
 
@@ -593,8 +553,6 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         {
 //            y = (y - (event->pos().y() - image.height() / 4.0)) / 0.5;
 //            y -= image.height() / 2.0 - event->pos().y();
-            m_y = (m_y - event->pos().y() + margins.top()) / 0.5f;
-            m_y += event->pos().y() - margins.top();
             m_verticalResolution *= 0.5;
         }
     }
@@ -603,16 +561,12 @@ void GradientMap<ty>::wheelEvent(QWheelEvent* event)
         if((event->modifiers() & Qt::ShiftModifier) == 0)
         {
 //            x = (x + image.width() / 2.0) / 2.0;
-            m_x = (m_x - event->pos().x() + margins.left()) / 2.0f;
-            m_x += event->pos().x() - margins.left();
             m_horizontalResolution *= 2.0;
         }
 
         if((event->modifiers() & Qt::ControlModifier) == 0)
         {
 //            y = (y + image.height() / 2.0) / 2.0;
-            m_y = (m_y - event->pos().y() + margins.top()) / 2.0f;
-            m_y += event->pos().y() - margins.top();
             m_verticalResolution *= 2.0;
         }
     }
@@ -636,19 +590,11 @@ void GradientMap<ty>::resizeEvent(QResizeEvent* event)
     QRect const& margins = contentsRect();
 
     QSize const marginsSize = QSize(width() - margins.width(), height() - margins.height()),
-        imageOldSize = event->oldSize() - marginsSize,
         imageSize = event->size() - marginsSize;
 
     if(imageSize.width() > 0 && imageSize.height() > 0)
     {
         m_image = QImage(imageSize.width(), imageSize.height(), QImage::Format_RGB32);
-
-        if(imageOldSize.width() > 0 && imageOldSize.height() > 0)
-        {
-            m_x *= static_cast<float>(imageSize.width()) / static_cast<float>(imageOldSize.width());
-            m_y *= static_cast<float>(imageSize.height()) / static_cast<float>(imageOldSize.height());
-        }
-
         updateGradientImage();
 //        update();
     }
