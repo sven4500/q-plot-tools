@@ -17,14 +17,53 @@ signals:
 
 public:
     Axes2D(QWidget* parent = nullptr):
-        AbstractPainter(parent)
+        AbstractPainter(parent), _numTicks(10)
     {
+        makeNiceStep();
         setMouseTracking(true);
     }
 
     virtual ~Axes2D()
     {
 
+    }
+
+    static double niceNumber(double number, bool round)
+    {
+        // Graphic Gems Vol.1 p.62
+
+        int exp = std::floor(std::log10(number));
+        double f = number / std::pow(10.0, exp);
+        double nf;
+
+        if(round)
+        {
+            if(f < 1.5)
+                nf = 1.0;
+            else
+            if(f < 3.0)
+                nf = 2.0;
+            else
+            if(f < 7.0)
+                nf = 5.0;
+            else
+                nf = 10.0;
+        }
+        else
+        {
+            if(f <= 1.0)
+                nf = 1.0;
+            else
+            if(f <= 2.0)
+                nf = 2.0;
+            else
+            if(f <= 5.0)
+                nf = 5.0;
+            else
+                nf = 10.0;
+        }
+
+        return nf * std::pow(10.0, exp);
     }
 
 protected:
@@ -89,6 +128,7 @@ protected:
             _rubberband.setTopLeft(event->pos());
             _rubberband.setBottomRight(event->pos());
 
+            makeNiceStep();
             update();
         }
         else
@@ -164,6 +204,7 @@ protected:
                 _viewRegion._maxY -= deltaSpanY * y2;
             }
 
+            makeNiceStep();
             update();
         }
     }
@@ -243,7 +284,24 @@ protected:
     }
 
     ViewRegion2D _viewRegion;
+
+    double _stepX;
+    double _stepY;
+
+    int _numTicks;
+
+private:
+    void makeNiceStep()
+    {
+        double const rangeX = niceNumber(_viewRegion.spanX(), false);
+        double const rangeY = niceNumber(_viewRegion.spanY(), false);
+
+        _stepX = niceNumber(rangeX / (_numTicks - 1), true);
+        _stepY = niceNumber(rangeY / (_numTicks - 1), true);
+    }
+
     QRect _rubberband;
+
     QPointF _dragPoint;
 
 };

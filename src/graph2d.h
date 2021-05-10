@@ -43,22 +43,16 @@ protected:
 
     };
 
-    static double niceNumber(double number, bool round);
-
     void drawGrid(QPainter& painter);
     void drawCurves(QPainter& painter);
 
     int getNonexistingId()const;
 
     static QColor const defaultColor;
-    static int const _numTicks = 10;
 
     QFontMetrics _metrics;
 
     QMap<int, Curve2D> _curves;
-
-    double _stepX;
-    double _stepY;
 
 };
 
@@ -69,12 +63,6 @@ template<typename ty>
 Graph2D<ty>::Graph2D(QWidget* parent):
     Axes2D(parent), _metrics(font())
 {
-    double const rangeX = niceNumber(_viewRegion.spanX(), false);
-    double const rangeY = niceNumber(_viewRegion.spanY(), false);
-
-    _stepX = niceNumber(rangeX / (_numTicks - 1), true);
-    _stepY = niceNumber(rangeY / (_numTicks - 1), true);
-
     int const contentsLeft = 10 * _metrics.averageCharWidth();
     int const contentsTop = 3 * _metrics.lineSpacing();
     int const contentsRight = 5 * _metrics.averageCharWidth();
@@ -306,45 +294,6 @@ void Graph2D<ty>::drawCurves(QPainter& painter)
         painter.setPen(curve._pen);
         painter.drawPolyline(&polyline[0], curve._points.count());
     }
-}
-
-template<typename ty>
-double Graph2D<ty>::niceNumber(double number, bool round)
-{
-    // Graphic Gems Vol.1 p.62
-
-    int exp = std::floor(std::log10(number));
-    double f = number / std::pow(10.0, exp);
-    double nf;
-
-    if(round)
-    {
-        if(f < 1.5)
-            nf = 1.0;
-        else
-        if(f < 3.0)
-            nf = 2.0;
-        else
-        if(f < 7.0)
-            nf = 5.0;
-        else
-            nf = 10.0;
-    }
-    else
-    {
-        if(f <= 1.0)
-            nf = 1.0;
-        else
-        if(f <= 2.0)
-            nf = 2.0;
-        else
-        if(f <= 5.0)
-            nf = 5.0;
-        else
-            nf = 10.0;
-    }
-
-    return nf * std::pow(10.0, exp);
 }
 
 #endif
