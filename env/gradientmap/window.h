@@ -1,34 +1,36 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef CUSTOMWIDGET_H
+#define CUSTOMWIDGET_H
 
-#include <QMainWindow>
+#include <QWidget>
 #include <QLabel>
 #include <vector>
 #include <gradientmap.h>
 
-class MainWindow: public QMainWindow
+class CustomWidget: public QWidget
 {
     Q_OBJECT
 
 public:
-
-    MainWindow(QWidget* parent = nullptr);
-    virtual ~MainWindow();
+    CustomWidget(QWidget* parent = nullptr);
+    virtual ~CustomWidget();
 
 private slots:
-
     void updateFps();
     void catchPoint(int x, int y);
 
 private:
-
     virtual void keyPressEvent(QKeyEvent* event);
 
-    std::vector<float*> _fvect;
+    //std::vector<float*> _fvect;
     std::vector<int*> _ivect;
 
+    //GradientMap<float>* _gmap;
     GradientMap<int>* _gmap;
-    QLabel* _label;
+
+    QTimer* _timer;
+
+    QLabel* _FPSlabel;
+    QLabel* _pointLabel;
 
     int _frames;
 
