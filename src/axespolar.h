@@ -2,6 +2,7 @@
 #define AXESPOLAR_H_
 
 #include <QLine>
+#include <axes2d.h> // niceNumber
 #include <abstractpainter.h>
 
 class AxesPolar: public AbstractPainter
@@ -50,8 +51,10 @@ protected:
     };
 
     AxesPolar(QWidget* parent = nullptr):
-        AbstractPainter(parent), _numStepsPhi(24)
+        AbstractPainter(parent), _numTicksRho(6), _numTicksPhi(24)
     {
+        _stepRho = Axes2D::niceNumber(_viewRegion.spanRho() / (_numTicksRho - 1), true);
+
         // todo: add some space for tick labels (use QFontMetrics)
         setContentsMargins(10, 10, 10, 10);
         addToRenderQueue(reinterpret_cast<PaintFunc>(&drawGrid));
@@ -67,7 +70,7 @@ protected:
         QRect const& rect = contentsRect();
 
         int const rad = std::min(rect.width(), rect.height()) / 2;
-        double const stepPhi = (2 * M_PI) / _numStepsPhi;
+        double const stepPhi = (2 * M_PI) / _numTicksPhi;
 
         QVector<QLine> const majorLines{
             QLine(QPoint(rect.center()), toPixel(PolarPoint(_viewRegion._maxRho, M_PI * 0.0))),
@@ -76,9 +79,9 @@ protected:
             QLine(QPoint(rect.center()), toPixel(PolarPoint(_viewRegion._maxRho, M_PI * 1.5)))
         };
 
-        QVector<QLine> minorLines(_numStepsPhi);
+        QVector<QLine> minorLines(_numTicksPhi);
 
-        for(int i = 0; i < _numStepsPhi; ++i)
+        for(int i = 0; i < _numTicksPhi; ++i)
         {
             PolarPoint const p(_viewRegion._maxRho, stepPhi * i);
 
@@ -89,10 +92,16 @@ protected:
             minorLines[i].setP2(p2);
         }
 
-        // todo: draw concentric circles
-
         painter.setPen(QPen(Qt::gray, 1, Qt::DashLine));
         painter.drawLines(minorLines);
+
+        for(int i = 1; i < _numTicksRho; ++i)
+        {
+            QPoint const pixel = toPixel(PolarPoint(_viewRegion._minRho + _stepRho * i, 0.0));
+            int const rho = pixel.x() - rect.center().x();
+
+            painter.drawEllipse(rect.center(), rho, rho);
+        }
 
         painter.setPen(QPen(Qt::darkGray, 1, Qt::SolidLine));
         painter.drawLines(majorLines);
@@ -118,7 +127,9 @@ protected:
 
 private:
     double _stepRho;
-    int _numStepsPhi;
+
+    int _numTicksRho;
+    int _numTicksPhi;
 
 };
 
