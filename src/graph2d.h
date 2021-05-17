@@ -46,7 +46,7 @@ protected:
     void drawGrid(QPainter& painter);
     void drawCurves(QPainter& painter);
 
-    int getNonexistingId()const;
+    int uniqueId()const;
 
     static QColor const defaultColor;
 
@@ -82,7 +82,7 @@ Graph2D<ty>::~Graph2D()
 }
 
 template<typename ty>
-int Graph2D<ty>::getNonexistingId()const
+int Graph2D<ty>::uniqueId()const
 {
     int counter = 0;
 
@@ -106,7 +106,7 @@ int Graph2D<ty>::getNonexistingId()const
 template<typename ty>
 int Graph2D<ty>::addCurve(QVector<ty> const& y, QColor const& color)
 {
-    int const id = getNonexistingId();
+    int const id = uniqueId();
 
     if(id >= 0)
     {
@@ -130,7 +130,7 @@ int Graph2D<ty>::addCurve(QVector<ty> const& y, QColor const& color)
 template<typename ty>
 int Graph2D<ty>::addCurve(QVector<ty> const& x, QVector<ty> const& y, QColor const& color)
 {
-    int const id = getNonexistingId();
+    int const id = uniqueId();
 
     if(id >= 0)
     {
@@ -154,7 +154,7 @@ int Graph2D<ty>::addCurve(QVector<ty> const& x, QVector<ty> const& y, QColor con
 template<typename ty>
 int Graph2D<ty>::addCurve(QVector<QPointF> const& xy, QColor const& color)
 {
-    int const id = getNonexistingId();
+    int const id = uniqueId();
 
     if(id >= 0)
     {
@@ -275,9 +275,10 @@ void Graph2D<ty>::drawGrid(QPainter& painter)
 template<typename ty>
 void Graph2D<ty>::drawCurves(QPainter& painter)
 {
-    QVector<QPoint> polyline;
-
     painter.setClipRect(contentsRect().adjusted(1, 1, -1, -1));
+
+    // Leave polyline outside loop to avoid unnecessary memory reallocations.
+    QVector<QPoint> polyline;
 
     for(auto const& curve : _curves)
     {
