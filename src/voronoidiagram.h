@@ -23,6 +23,8 @@ public:
     void removePoints(ty const* x, ty const* y, int count);
 
 protected:
+    void drawPoints(QPainter& painter);
+
     QVector<QPointF> _points;
 
 };
@@ -31,7 +33,7 @@ template<typename ty>
 VoronoiDiagram<ty>::VoronoiDiagram(QWidget* parent):
     Axes2D(parent)
 {
-
+    addToRenderQueue(reinterpret_cast<PaintFunc>(&drawPoints));
 }
 
 template<typename ty>
@@ -70,6 +72,22 @@ void VoronoiDiagram<ty>::addPoints(ty const* x, ty const* y, int count)
 
     _points.append(vect);
     update();
+}
+
+template<typename ty>
+void VoronoiDiagram<ty>::drawPoints(QPainter& painter)
+{
+    QVector<QPointF> points(_points.size());
+
+    for(auto i = 0; i < _points.size(); ++i)
+    {
+        points[i] = toPixel(_points[i]);
+    }
+
+    QPen const pen(Qt::black, 4, Qt::SolidLine/*, Qt::RoundCap, Qt::RoundJoin*/);
+
+    painter.setPen(pen);
+    painter.drawPoints(&points[0], points.size());
 }
 
 #endif
