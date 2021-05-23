@@ -19,4 +19,5 @@ HEADERS += \
     $$SRCDIR/axespolar.h \
     $$SRCDIR/gradientmap.h \
     $$SRCDIR/graph2d.h \
-    $$SRCDIR/graphpolar.h
+    $$SRCDIR/graphpolar.h \
+    $$SRCDIR/voronoidiagram.h
