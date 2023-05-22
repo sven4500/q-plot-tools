@@ -54,6 +54,12 @@ protected:
 
     QMap<int, Curve2D> _curves;
 
+    // For testing purposes mark testing class as friend and only if testlib
+    // module is enabled. You can continue friend list adding new test classes.
+    #if defined(QT_TESTLIB_LIB)
+    friend class testgraph2d;
+    #endif
+
 };
 
 template<typename ty>

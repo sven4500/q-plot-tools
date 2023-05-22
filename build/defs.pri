@@ -1,7 +1,10 @@
-SRCDIR = ../../src
-TMPDIR = ../../buildtmp
+QT += core gui
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-DESTDIR = ../../bin
+SRCDIR = $$PWD/../src
+TMPDIR = $$PWD/../buildtmp
+
+DESTDIR =$$PWD/../bin
 
 MOC_DIR = $$TMPDIR/$$TARGET
 OBJECTS_DIR = $$TMPDIR/$$TARGET
